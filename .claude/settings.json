@@ -22,7 +22,10 @@
       "Bash(sed -i '' '1s/^/import { delimiter } from \"node:path\"\\\\n/' src/main/service/background-service.ts)",
       "Bash(node_modules/.bin/oxlint)",
       "Bash(timeout 590 bun run typecheck)",
-      "Bash(timeout 300 bun run typecheck)"
+      "Bash(timeout 300 bun run typecheck)",
+      "Bash(gh auth *)",
+      "Bash(git branch *)",
+      "Bash(gh repo *)"
     ]
   }
 }

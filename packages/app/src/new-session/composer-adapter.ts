@@ -1,3 +1,4 @@
+import { sessionHarness } from "@/session/harness"
 import { Predicate } from "effect"
 import { base64Encode } from "@opencode/util/encode"
 import { Session } from "@opencode/schema/session"
@@ -102,6 +103,7 @@ export function createNewSessionComposerAdapter(props: {
           variant: selection.variant,
         },
         location: { directory: sessionDirectory },
+        metadata: { harness: sessionHarness.harness() },
       })
 
       const creation = created.request.then(

@@ -3,6 +3,8 @@ export * as Pty from "./pty.js"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
 import type { Disp, Proc } from "#pty"
 import { Context, Effect, Layer, Schema, Types } from "effect"
+import os from "os"
+import path from "path"
 import { Pty } from "@opencode/schema/pty"
 import { Bus } from "./bus.js"
 import { Location } from "./location.js"
@@ -85,6 +87,8 @@ export interface Interface {
   readonly update: (id: ID, input: UpdateInput) => Effect.Effect<Info, NotFoundError>
   readonly remove: (id: ID) => Effect.Effect<void, NotFoundError>
   readonly write: (id: ID, data: string) => Effect.Effect<void, NotFoundError>
+  /** The last `limit` characters a terminal printed, with control sequences removed, for the agent to read. */
+  readonly tail: (id: ID, limit: number) => Effect.Effect<string, NotFoundError>
   readonly attach: (id: ID, input: AttachInput) => Effect.Effect<Attachment, NotFoundError | ExitedError>
 }
 
@@ -179,6 +183,7 @@ const layer = Layer.effect(
         env.LC_CTYPE = "C.UTF-8"
         env.LANG = "C.UTF-8"
       }
+      if (path.basename(command) === "zsh") Object.assign(env, yield* Effect.promise(() => zshIntegration(env)))
       yield* Effect.logInfo("creating session", { id, cmd: command, args, cwd })
       const { spawn } = yield* Effect.promise(() => pty())
       const proc = yield* Effect.sync(() => spawn(command, args, { name: "xterm-256color", cwd, env }))
@@ -257,6 +262,11 @@ const layer = Layer.effect(
       if (session.info.status === "running") session.process.write(data)
     })
 
+    const tail = Effect.fn("Pty.tail")(function* (id: ID, limit: number) {
+      const session = yield* requireSession(id)
+      return stripControl(session.buffer.slice(-limit)).trim()
+    })
+
     const attach = Effect.fn("Pty.attach")(function* (id: ID, input: AttachInput) {
       const session = yield* requireSession(id)
       if (session.info.status !== "running") return yield* new ExitedError({ ptyID: id })
@@ -310,7 +320,7 @@ const layer = Layer.effect(
       }
     })
 
-    return Service.of({ list, get, create, update, remove, write, attach })
+    return Service.of({ list, get, create, update, remove, write, tail, attach })
   }),
 )
 
@@ -319,3 +329,42 @@ export const node = makeLocationNode({
   layer,
   deps: [Bus.node, Location.node, ShellSelect.node],
 })
+
+// CSI and OSC sequences, then stray control characters other than newline and tab.
+const stripControl = (text: string) =>
+  text
+    .replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, "")
+    .replace(/\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "")
+
+const ZSH_FILES = [".zshenv", ".zprofile", ".zshrc", ".zlogin"] as const
+
+// Each shim file sources the user's own file with ZDOTDIR pointed back at their directory, so their setup runs
+// unchanged. The cli2 integration is added last, only when cli2 is on the resulting PATH.
+const zshShim = (file: (typeof ZSH_FILES)[number]) =>
+  [
+    `_opencode_zdotdir=$ZDOTDIR`,
+    `ZDOTDIR=$OPENCODE_USER_ZDOTDIR`,
+    `[[ -r $ZDOTDIR/${file} ]] && source $ZDOTDIR/${file}`,
+    `ZDOTDIR=$_opencode_zdotdir`,
+    `unset _opencode_zdotdir`,
+    ...(file === ".zshrc"
+      ? [
+          `if (( $+commands[cli2] )) && [[ -o interactive ]]; then`,
+          `  eval "$(command cli2 shell-init zsh 2>/dev/null)"`,
+          `  print -r -- 'cli2 is ready: c2 "<what you want to do>" (add --resolver auto for Apple Foundation Models)'`,
+          `fi`,
+        ]
+      : []),
+    ``,
+  ].join("\n")
+
+/** Points zsh at a shim directory that loads the user's config and then cli2's shell integration. */
+async function zshIntegration(env: Record<string, string>) {
+  const dir = path.join(os.tmpdir(), "opencode-zdotdir")
+  await Promise.all(ZSH_FILES.map((file) => Bun.write(path.join(dir, file), zshShim(file))))
+  // Started from one of our own terminals, ZDOTDIR is already the shim; keep the original user directory.
+  const user = env.ZDOTDIR === dir ? env.OPENCODE_USER_ZDOTDIR : env.ZDOTDIR
+  return { ZDOTDIR: dir, OPENCODE_USER_ZDOTDIR: user || env.HOME || os.homedir() }
+}

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mktemp -d)",
+      "Bash(:)",
+      "Bash(bun -e ' *)",
+      "Bash(ZDOTDIR=/tmp/opencode-zdotdir OPENCODE_USER_ZDOTDIR=/Users/randy zsh -lic 'echo ZD=$ZDOTDIR; type c2 | head -1; command -v cli2')",
+      "Bash(awk '{print $11,$12,$13,$14}')",
+      "Bash(opencode service *)",
+      "Read(//Users/randy/.local/state/opencode/**)",
+      "Read(//Users/randy/Library/Application Support/ai.opencode.desktop.dev/**)",
+      "Bash(lsof -iTCP:3084 -sTCP:LISTEN)",
+      "Read(//Users/randy/.config/opencode/**)",
+      "Bash(cd /Users/randy/Developer/opencode/packages/desktop/src/main/service && sed -n 1,40p sidecar-credentials.ts | head -50; cat ~/.config/opencode/service-local.json | head -5)",
+      "Bash(python3 -c 'import json;print\\(json.load\\(open\\('\\\\''/Users/randy/.config/opencode/service-local.json'\\\\''\\)\\)['\\\\''password'\\\\'']\\)')",
+      "Bash(curl -s -m 5 -u opencode:__CMDSUB_OUTPUT__ http://127.0.0.1:3084/api/agent?directory=/Users/randy/Developer/opencode -w ' [%{http_code}]\\\\n')",
+      "Bash(python3 -c ' *)"
+    ]
+  }
+}

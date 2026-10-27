@@ -79,10 +79,7 @@ function goUpsellKeys(status: SessionStatus) {
   }
 }
 
-export function useUsageExceededDialogs(input?: {
-  selection?: () => ModelSelection | undefined
-  onDone?: () => void
-}) {
+export function useUsageExceededDialogs(input?: { selection?: () => ModelSelection | undefined; onDone?: () => void }) {
   const sdk = useWorkspaceLocation()
   const dialog = useDialog()
   const local = useLocal()

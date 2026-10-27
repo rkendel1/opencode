@@ -514,6 +514,11 @@ export function createComposerModel(adapter: ComposerAdapter, options?: { queue?
             }
           : undefined
       },
+      harness: {
+        options: () => HARNESSES.map((id) => ({ id, label: id })),
+        current: () => adapter.controls().harness.current,
+        onSelect: (value: string) => adapter.controls().harness.select(value),
+      },
       variant: {
         options: () => {
           const preview = adapter.controls().model.preview
@@ -641,3 +646,5 @@ function openComment(
 function firstWord(query: string) {
   return query.toLowerCase().split(" ")[0] ?? ""
 }
+
+const HARNESSES = ["stack-agent", "opencode"]

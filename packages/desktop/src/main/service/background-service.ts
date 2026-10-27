@@ -4,6 +4,7 @@ import { CHANNEL } from "../constants"
 import { BackgroundServiceState } from "./background-service-state"
 import { cleanStages } from "./cli-stages"
 import { keptStages, serviceVersion, shouldRetryEnsure } from "./cli-version"
+import { DesktopPaths } from "../paths"
 import { DesktopCli } from "./desktop-cli"
 import { SidecarCredentials } from "./sidecar-credentials"
 import { sidecarProbe } from "./sidecar-probe"
@@ -41,6 +42,22 @@ const connect = Effect.fn("BackgroundService.connect")(function* (mode: "initial
   const runFork = Effect.runForkWith(yield* Effect.context<FileSystem.FileSystem | Path.Path>())
   const isolated = !app.isPackaged && process.env.OPENCODE_DESKTOP_ISOLATED_SERVER === "1"
   const cli = yield* desktopCli.resolve
+  // The service spawns stack-agent for every session; it inherits this from the desktop process.
+  const paths = yield* DesktopPaths.resolve
+  const stackAgent = process.platform === "win32" ? "stack-agent.exe" : "stack-agent"
+  // A Finder-launched app has a minimal PATH; stack-agent finds pax (its test runner) through it.
+  process.env.PATH = [
+    ...new Set([
+      ...(process.env.PATH?.split(path.delimiter) ?? []),
+      "/usr/local/bin",
+      "/opt/homebrew/bin",
+      path.join(app.getPath("home"), ".local", "bin"),
+    ]),
+  ].join(path.delimiter)
+  process.env.STACK_AGENT_BIN ??= path.join(
+    app.isPackaged ? process.resourcesPath : paths.developmentResourcesRoot,
+    stackAgent,
+  )
   const version = serviceVersion({ channel: CHANNEL, isolated, mode, version: cli.version })
 
   if (isolated) process.env.XDG_STATE_HOME = app.getPath("userData")

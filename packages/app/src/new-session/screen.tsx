@@ -7,6 +7,8 @@ import { createEffect, createMemo, createResource, on, untrack } from "solid-js"
 import { createComposerModel } from "@/composer/model"
 import { useComposerCommands } from "@/composer/commands"
 import { createNewSessionComposerAdapter } from "./composer-adapter"
+import { ModePill } from "@/session/mode-pill"
+import { sessionHarness } from "@/session/harness"
 import { NewSessionView } from "./view"
 import { createNewSessionWorkspaceController } from "./workspace/controller"
 import { useNewSessionCommands } from "./commands"
@@ -94,6 +96,8 @@ export default function NewSessionPage(props: { draftId: string }) {
       <div class="flex-1 min-h-0 flex flex-col gap-2 px-[var(--shell-inline-inset,8px)] pb-[var(--shell-bottom-inset,8px)] pt-[var(--shell-top-inset,8px)]">
         <NewSessionView composer={model} project={project} workspace={workspace} location={location} />
       </div>
+      {/* The harness is chosen in the composer and stored on the session when it is created. */}
+      <ModePill cli={sessionHarness.cli()} onCli={sessionHarness.setCli} />
     </div>
   )
 }

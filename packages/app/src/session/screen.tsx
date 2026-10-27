@@ -16,6 +16,8 @@ import {
 import { createStore } from "solid-js/store"
 import { ResizeHandle } from "@opencode/ui/resize-handle"
 import type { BackgroundTask, MountedSession, SessionScreen } from "@opencode/plugin/gui"
+import { ModePill } from "./mode-pill"
+import { sessionHarness } from "./harness"
 import { MessageTimeline } from "@/session/timeline/message-timeline"
 import { ComposerDropzone } from "@/composer/dropzone"
 import { useSettings } from "@/settings/model"
@@ -207,7 +209,12 @@ function SessionScreenContent(props: {
     if (screen.side.open()) setStore("sideMounted", true)
   })
 
-  const mobileView = attachment.mobile.current
+  // CLI mode swaps the conversation for the terminal's narrow-screen view, which already lists, creates and
+  // switches terminals, so a wide screen toggles between chatting and the command line.
+  const terminalView = createMemo(() => mobile.entries().find((entry) => entry.mobile.icon === "terminal"))
+  const cli = () => isDesktop() && sessionHarness.cli() && terminalView() !== undefined
+  const narrow = () => !isDesktop() || cli()
+  const mobileView = () => (cli() ? (terminalView()?.key ?? "session") : attachment.mobile.current())
 
   const mobileEntry = createMemo(() => {
     const key = mobileView()
@@ -215,13 +222,13 @@ function SessionScreenContent(props: {
     return key === "session" ? undefined : mobile.find(key)
   })
 
-  const conversationVisible = createMemo(() => isDesktop() || mobileView() === "session")
+  const conversationVisible = createMemo(() => !narrow() || mobileView() === "session")
 
   // Narrow-screen views that ask to stay mounted once shown, e.g. a terminal that keeps its shell's screen.
   createEffect(() => {
     const entry = mobileEntry()
 
-    if (isDesktop() || !entry?.mobile.cached || store.mobileCached.includes(entry.key)) return
+    if (!narrow() || !entry?.mobile.cached || store.mobileCached.includes(entry.key)) return
     setStore("mobileCached", (keys) => [...keys, entry.key])
   })
 
@@ -379,7 +386,10 @@ function SessionScreenContent(props: {
         }}
       </Show>
       <div class="relative isolate flex-1 min-h-0 overflow-hidden">
-        <Show when={!isDesktop() && session.identity.params.id}>
+        <Show when={isDesktop() && terminalView() && session.identity.params.id}>
+          <ModePill cli={cli()} onCli={sessionHarness.setCli} />
+        </Show>
+        <Show when={narrow() && session.identity.params.id}>
           <For each={cachedViews()}>
             {(entry) => (
               <div
@@ -400,10 +410,10 @@ function SessionScreenContent(props: {
           </For>
         </Show>
         <Switch>
-          <Match when={!isDesktop() && mobileEntry()?.mobile.cached}>
+          <Match when={narrow() && mobileEntry()?.mobile.cached}>
             <></>
           </Match>
-          <Match when={!isDesktop() && session.identity.params.id ? mobileEntry() : undefined}>
+          <Match when={narrow() && session.identity.params.id ? mobileEntry() : undefined}>
             {(entry) => (
               <MobilePanel
                 screen={props.screen}
@@ -428,7 +438,7 @@ function SessionScreenContent(props: {
           stays shallower than the timeline's observed elements, so their resizes from its inset arrive in the same
           ResizeObserver pass. */}
       <div class="relative z-[70] flex h-0 shrink-0 flex-col justify-end">
-        <Show when={composer.active()} keyed>
+        <Show when={!cli() && composer.active()} keyed>
           {(model) => (
             <ActiveSessionComposerRegion
               session={session}

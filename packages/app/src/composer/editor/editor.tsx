@@ -419,6 +419,9 @@ export function ComposerEditor(props: ComposerEditorProps) {
             style={buttons()}
           >
             <div ref={controlsContent} class="flex h-full w-max min-w-full items-center gap-0.5">
+              <Show when={view.harness} keyed>
+                {(control) => <ComposerEditorConfiguredSelect title="Agent harness" control={control} />}
+              </Show>
               <Show when={view.agent} keyed>
                 {(control) => (
                   <ComposerEditorConfiguredSelect

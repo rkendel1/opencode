@@ -106,7 +106,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       void syncWhileBooting(() => data.location.agent.sync({ directory })).catch(() => undefined)
     })
 
-    const agentsVisible = createMemo(() => settings.visibility.customAgents() || hasCustomAgent(list()))
+    const agentsVisible = createMemo(() => settings.visibility.customAgents() || hasCustomAgent(list()) || list().length > 1)
     const connected = createMemo(() => new Set(providers.connected().map((item) => item.id)))
 
     const [saved, setSaved, , savedReady] = persisted(

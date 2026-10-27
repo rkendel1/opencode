@@ -123,10 +123,7 @@ export interface ComposerStateValue {
   readonly capture: () => ComposerStateValue
 }
 
-function createComposerStateValue(
-  store: ComposerStore,
-  setStore: SetStoreFunction<ComposerStore>,
-): ComposerStateValue {
+function createComposerStateValue(store: ComposerStore, setStore: SetStoreFunction<ComposerStore>): ComposerStateValue {
   const actions = createComposerActions(setStore)
   // The quote whose comment editor is open, by key; a request made before the composer shows waits for it.
   const [quoteComment, setQuoteComment] = createSignal<string>()

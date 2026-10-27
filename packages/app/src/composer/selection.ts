@@ -11,9 +11,16 @@ import { cycleModelVariant, getConfiguredAgentVariant, resolveModelVariant } fro
 import { useComposerState } from "./persistence"
 import { useConfiguredModel } from "@/providers/models/configured"
 import { consoleProviderGroup, consoleProviderName } from "@/providers/catalog/console"
+import { sessionHarness, toHarness } from "@/session/harness"
 import { useGlobal } from "@/runtime/server/runtime"
 
-export function createComposerControls(input: { model?: ModelSelection } = {}) {
+export function createComposerControls(
+  input: {
+    model?: ModelSelection
+    /** The session's harness; before a session exists, the shared choice the new session will start with. */
+    harness?: { current: () => string; select: (value: string) => void }
+  } = {},
+) {
   const local = useLocal()
   const sdk = useWorkspaceLocation()
   const data = useData()
@@ -79,6 +86,10 @@ export function createComposerControls(input: { model?: ModelSelection } = {}) {
         current: local.agent.current()?.name ?? "",
         visible: local.agent.visible(),
         select: local.agent.set,
+      },
+      harness: {
+        current: (input.harness ?? { current: sessionHarness.harness }).current(),
+        select: input.harness?.select ?? ((value: string) => sessionHarness.setHarness(toHarness(value))),
       },
       model: {
         selection,

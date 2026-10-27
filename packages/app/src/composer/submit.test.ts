@@ -51,6 +51,7 @@ function controls(): ComposerControls {
       visible: true,
       select() {},
     },
+    harness: { current: "stack-agent", select() {} },
     model: { selection, paid: true, loading: false },
   }
 }

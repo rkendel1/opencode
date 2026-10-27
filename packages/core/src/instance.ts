@@ -37,7 +37,7 @@ import { Reference } from "./reference.js"
 import { Rpc } from "./rpc.js"
 import { WebSearch } from "./websearch.js"
 import { ReferenceInstructions } from "./reference/instructions.js"
-import { SessionRunnerLLM } from "./session/runner/llm.js"
+import { SessionRunnerStackAgent } from "./session/runner/stack-agent.js"
 import { SessionRunnerModel } from "./session/runner/model.js"
 import { SessionCompaction } from "./session/compaction.js"
 import { SessionTitle } from "./session/title.js"
@@ -107,7 +107,7 @@ const nodes = [
   SessionTitle.node,
   SessionContext.node,
   Snapshot.node,
-  SessionRunnerLLM.node,
+  SessionRunnerStackAgent.node,
   Vcs.node,
   // Start repository watches only after boot-critical filesystem and Git work.
   LocationWatcher.node,

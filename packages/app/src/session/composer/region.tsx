@@ -43,6 +43,7 @@ import { useOpenSessionRoute } from "../session-identity-header"
 import { resolveSessionComposerSelection } from "./selection"
 import { composerProviderName } from "@/composer/selection"
 import { useProviders } from "@/providers/catalog/providers"
+import { toHarness } from "../harness"
 import { SubagentBar } from "./subagent-bar"
 import { createSessionRequestModel } from "../requests/model"
 import type { Region } from "@/runtime/plugin/panels"
@@ -68,7 +69,20 @@ export function createActiveSessionRegion(input: {
   const platform = usePlatform()
   const prompt = useComposerState()
   const state = createSessionRequestModel()
-  const controls = createComposerControls()
+  const controls = createComposerControls({
+    harness: {
+      current: () => toHarness(String(input.session.data.info()?.metadata?.harness ?? "")),
+      select: (value) => {
+        const info = input.session.data.info()
+
+        if (!info) return
+        const metadata = { ...info.metadata, harness: toHarness(value) }
+
+        data.session.remember({ ...info, metadata })
+        void server.api.session.update({ sessionID: info.id, metadata })
+      },
+    },
+  })
   let promptRef: HTMLDivElement | undefined
 
   createEffect(

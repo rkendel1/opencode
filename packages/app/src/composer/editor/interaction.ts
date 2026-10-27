@@ -41,6 +41,7 @@ export type ComposerEditorView = {
     onAttach: () => void
   }
   agent?: ComposerSelectControl
+  harness?: ComposerSelectControl
   variant?: ComposerSelectControl
   submit: {
     available?: Accessor<boolean>

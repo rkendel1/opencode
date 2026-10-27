@@ -15,6 +15,8 @@ export type ComposerControls = {
     visible: boolean
     select: (name: string | undefined) => void
   }
+  /** Which agent harness runs the session's prompts: stack-agent or opencode. */
+  harness: { current: string; select: (value: string) => void }
   model: {
     selection: ModelSelection
     providerName?: string

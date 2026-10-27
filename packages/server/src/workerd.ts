@@ -134,6 +134,7 @@ const ptyLayer = Layer.succeed(
     update: (ptyID) => Effect.fail(new Pty.NotFoundError({ ptyID })),
     remove: (ptyID) => Effect.fail(new Pty.NotFoundError({ ptyID })),
     write: (ptyID) => Effect.fail(new Pty.NotFoundError({ ptyID })),
+    tail: (ptyID) => Effect.fail(new Pty.NotFoundError({ ptyID })),
     attach: (ptyID) => Effect.fail(new Pty.NotFoundError({ ptyID })),
   }),
 )

@@ -16,7 +16,13 @@
       "Bash(curl -s -m 5 -u opencode:__CMDSUB_OUTPUT__ http://127.0.0.1:3084/api/agent?directory=/Users/randy/Developer/opencode -w ' [%{http_code}]\\\\n')",
       "Bash(python3 -c ' *)",
       "Bash(bun upgrade *)",
-      "Bash(bun --version)"
+      "Bash(bun --version)",
+      "Bash(timeout 600 bun run typecheck)",
+      "Bash(sed -i '' 's/path\\\\.delimiter/delimiter/g' src/main/service/background-service.ts)",
+      "Bash(sed -i '' '1s/^/import { delimiter } from \"node:path\"\\\\n/' src/main/service/background-service.ts)",
+      "Bash(node_modules/.bin/oxlint)",
+      "Bash(timeout 590 bun run typecheck)",
+      "Bash(timeout 300 bun run typecheck)"
     ]
   }
 }

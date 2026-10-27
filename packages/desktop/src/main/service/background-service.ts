@@ -1,3 +1,4 @@
+import { delimiter } from "node:path"
 import { app } from "electron"
 import { Context, Effect, FileSystem, Layer, Option, Path, Schema } from "effect"
 import { CHANNEL } from "../constants"
@@ -48,12 +49,12 @@ const connect = Effect.fn("BackgroundService.connect")(function* (mode: "initial
   // A Finder-launched app has a minimal PATH; stack-agent finds pax (its test runner) through it.
   process.env.PATH = [
     ...new Set([
-      ...(process.env.PATH?.split(path.delimiter) ?? []),
+      ...(process.env.PATH?.split(delimiter) ?? []),
       "/usr/local/bin",
       "/opt/homebrew/bin",
       path.join(app.getPath("home"), ".local", "bin"),
     ]),
-  ].join(path.delimiter)
+  ].join(delimiter)
   process.env.STACK_AGENT_BIN ??= path.join(
     app.isPackaged ? process.resourcesPath : paths.developmentResourcesRoot,
     stackAgent,

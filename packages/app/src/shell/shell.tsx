@@ -26,6 +26,7 @@ import {
 import { createPanelMotion, guardClosingFocus, panelOpacity } from "@/shell/panel-motion"
 import { createSidebarPeek } from "@/shell/sidebar-peek"
 import { windowDragEnabled } from "@/session/header/drag-area"
+import { useAgentLabCommands } from "@/improve/commands"
 
 // How far Home steps along a peek's header to clear the collapsed toggle: to the toggle's end, from the sidebar's 18px
 // start padding.
@@ -189,6 +190,7 @@ export default function Layout(props: ParentProps) {
       },
     },
   ])
+  useAgentLabCommands()
   command.register("commands", () => [
     {
       id: COMMAND_SEARCH_ID,

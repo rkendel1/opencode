@@ -20,6 +20,7 @@ import { useServerSDK } from "@/runtime/server/client"
 import { useServer } from "@/runtime/server/current"
 import { formatServerError } from "@/runtime/server/errors"
 import { compareHref, improveHref, runtimeHref, sessionHref } from "@/shell/routes/session"
+import { ProjectPicker } from "@/compare/project-picker"
 import { lifecycle, live, validated } from "./model"
 
 // The pipeline runs on the server; the page polls its record while a stage is in progress.
@@ -122,6 +123,7 @@ export function ImproveScreen() {
 
 function Findings(props: { directory?: string; onCreated: () => void }) {
   const sdk = useServerSDK()
+  const server = useServer()
   const language = useLanguage()
 
   const [analysis] = createResource(
@@ -134,7 +136,7 @@ function Findings(props: { directory?: string; onCreated: () => void }) {
   return (
     <Show
       when={props.directory}
-      fallback={<p class="text-[13px] text-v2-text-text-muted">{language.t("improve.directory.missing")}</p>}
+      fallback={<ProjectPicker href={(directory) => improveHref(server.key, { directory })} />}
     >
       <Show
         when={current()}

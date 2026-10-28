@@ -18,6 +18,7 @@ import type { HomeProjectSelection, LocalProject } from "@/shell/state/layout"
 import { ServerConnection } from "@/runtime/server/registry"
 import { useLanguage } from "@/runtime/i18n/language"
 import { usePlatform } from "@/runtime/platform/platform"
+import { useCommand } from "@/shell/commands/command"
 import { ServerRowMenuView, serverMenuLabels } from "@/servers/registry/row-menu"
 import { ServerHealthIndicator } from "@/servers/registry/row"
 import { type ServerHealth } from "@/runtime/server/health"
@@ -103,11 +104,7 @@ export function HomeProjectsView(props: HomeProjectsViewProps) {
               </Show>
             </bdi>
             <Show when={props.servers.length > 1 && server()}>
-              {(server) => (
-                <bdi class="truncate text-v2-text-text-muted opacity-70">
-                  {props.serverLabel(server())}
-                </bdi>
-              )}
+              {(server) => <bdi class="truncate text-v2-text-text-muted opacity-70">{props.serverLabel(server())}</bdi>}
             </Show>
           </span>
           <Icon name="chevron-down" size="small" class="shrink-0 text-v2-icon-icon-muted" />
@@ -215,8 +212,7 @@ function HomeProjectsPanel(props: HomeProjectsViewProps) {
               props.servers.length > 1 ||
               props.servers.some(
                 (server) =>
-                  signInRequired(server, props.serverHealth(server)) ||
-                  (server.type === "plugin" && server.connecting),
+                  signInRequired(server, props.serverHealth(server)) || (server.type === "plugin" && server.connecting),
               )
             }
             fallback={
@@ -304,16 +300,39 @@ function HomeProjectsPanel(props: HomeProjectsViewProps) {
   )
 }
 
+// Registered for the whole shell by useAgentLabCommands; on Home they open for the selected project.
+const AGENT_LAB_ENTRIES = [
+  { command: "compare.open", action: "compare-agents", icon: "split", label: "compare.command" },
+  { command: "improve.open", action: "improvement-lab", icon: "flask", label: "improve.command" },
+  { command: "runtime.open", action: "stack-agent-runtime", icon: "cube", label: "runtime.command" },
+] as const
+
 export function HomeUtilityNav(props: {
   class?: string
   onOpenSettings: () => void
   onOpenHelp: () => void
   language: ReturnType<typeof useLanguage>
 }) {
+  const command = useCommand()
+
   return (
     <div
-      class={`${props.class ?? ""} min-w-0 flex-row justify-between gap-1 lg:flex-col lg:justify-start lg:pr-3 [&>button]:w-auto lg:[&>button]:w-full`}
+      class={`${props.class ?? ""} min-w-0 flex-row flex-wrap justify-between gap-1 lg:flex-col lg:justify-start lg:pr-3 [&>button]:w-auto lg:[&>button]:w-full`}
     >
+      <For each={AGENT_LAB_ENTRIES}>
+        {(entry) => (
+          <HomeProjectNavButton
+            type="button"
+            data-action={entry.action}
+            class="text-v2-text-text-faint [&>[data-slot=icon-svg]]:text-v2-icon-icon-muted"
+            onClick={() => command.trigger(entry.command)}
+          >
+            <Icon name={entry.icon} size="small" />
+            <span class={HOME_PROJECT_NAV_LABEL}>{props.language.t(entry.label)}</span>
+          </HomeProjectNavButton>
+        )}
+      </For>
+      <div class="hidden h-px bg-v2-border-border-base lg:my-2 lg:block" />
       <HomeProjectNavButton
         type="button"
         class="text-v2-text-text-faint [&>[data-slot=icon-svg]]:text-v2-icon-icon-muted"
@@ -432,7 +451,9 @@ function HomeServerRow(props: {
             class="flex min-w-0 flex-1 items-center gap-1"
             classList={{ "opacity-60": !healthy() && !incompatible() }}
           >
-            <span class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{props.serverLabel(props.server)}</span>
+            <span class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+              {props.serverLabel(props.server)}
+            </span>
             <Show when={props.server.label}>
               {(label) => (
                 <span

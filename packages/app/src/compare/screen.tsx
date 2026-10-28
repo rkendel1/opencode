@@ -17,6 +17,7 @@ import { useLanguage } from "@/runtime/i18n/language"
 import { useServerSDK } from "@/runtime/server/client"
 import { useServer } from "@/runtime/server/current"
 import { compareHref, improveHref, sessionHref } from "@/shell/routes/session"
+import { ProjectPicker } from "./project-picker"
 import { formatServerError } from "@/runtime/server/errors"
 import { formatMetric, HARNESSES, live, metricRows, runFor, settled } from "./model"
 
@@ -187,7 +188,7 @@ function TaskEditor(props: { directory?: string; onCreated: () => void }) {
   return (
     <Show
       when={props.directory}
-      fallback={<p class="text-[13px] text-v2-text-text-muted">{language.t("compare.directory.missing")}</p>}
+      fallback={<ProjectPicker href={(directory) => compareHref(server.key, { directory })} />}
     >
       <form
         data-component="compare-task-editor"

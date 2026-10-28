@@ -14,12 +14,6 @@ export function useNewSessionCommands(input: {
     enabled: () => boolean
     cycle: () => void
   }
-  /** Opens the Compare Agents workspace for the draft's repository. */
-  compare: () => void
-  /** Opens the Improvement Lab for the draft's repository. */
-  improve: () => void
-  /** Opens the Stack-Agent runtime page. */
-  runtime: () => void
 }) {
   const command = useCommand()
   const dialog = useDialog()
@@ -52,27 +46,6 @@ export function useNewSessionCommands(input: {
       keybind: "mod+alt+l",
       disabled: !input.workspace.enabled(),
       onSelect: input.workspace.cycle,
-    },
-    {
-      id: "compare.open",
-      title: language.t("compare.command"),
-      description: language.t("compare.command.description"),
-      category: language.t("command.category.workspace"),
-      onSelect: input.compare,
-    },
-    {
-      id: "improve.open",
-      title: language.t("improve.command"),
-      description: language.t("improve.command.description"),
-      category: language.t("command.category.workspace"),
-      onSelect: input.improve,
-    },
-    {
-      id: "runtime.open",
-      title: language.t("runtime.command"),
-      description: language.t("runtime.command.description"),
-      category: language.t("command.category.workspace"),
-      onSelect: input.runtime,
     },
   ])
   // Shadows the titlebar's command of the same key while the draft is mounted, so it searches projects in place.

@@ -2,7 +2,7 @@ import { createPromptProjectController } from "@/new-session/project/selector"
 import { useNewSessionLocationDialog } from "@/new-session/location/dialog"
 import { useTabs, type DraftTab } from "@/shell/tabs/tabs"
 import { useLayout } from "@/shell/state/layout"
-import { A, useNavigate, useSearchParams } from "@solidjs/router"
+import { A, useSearchParams } from "@solidjs/router"
 import { createEffect, createMemo, createResource, on, Show, untrack } from "solid-js"
 import { useLanguage } from "@/runtime/i18n/language"
 import { compareHref, improveHref, runtimeHref } from "@/shell/routes/session"
@@ -22,7 +22,6 @@ export default function NewSessionPage(props: { draftId: string }) {
   const tabs = useTabs()
   const layout = useLayout()
   const language = useLanguage()
-  const navigate = useNavigate()
 
   const draftTab = createMemo(() =>
     tabs.store.find((tab): tab is DraftTab => tab.type === "draft" && tab.draftID === search.draftId),
@@ -64,21 +63,6 @@ export default function NewSessionPage(props: { draftId: string }) {
     workspace: {
       enabled: workspace.bar.visible,
       cycle: workspace.selection.cycle,
-    },
-    compare: () => {
-      const draft = draftTab()
-
-      if (draft) navigate(compareHref(draft.server, { directory: draft.directory }))
-    },
-    improve: () => {
-      const draft = draftTab()
-
-      if (draft) navigate(improveHref(draft.server, { directory: draft.directory }))
-    },
-    runtime: () => {
-      const draft = draftTab()
-
-      if (draft) navigate(runtimeHref(draft.server))
     },
   })
   // Focus once the draft loads. restoreFocus reads the stored cursor, so tracking it here would reapply
@@ -133,6 +117,13 @@ export default function NewSessionPage(props: { draftId: string }) {
               class="rounded-lg border border-v2-border-border-base bg-v2-background-bg-base px-2 py-1 text-12-medium text-v2-text-text-muted hover:text-v2-text-text-base"
             >
               {language.t("improve.command")}
+            </A>
+            <A
+              data-action="stack-agent-runtime"
+              href={runtimeHref(draft().server)}
+              class="rounded-lg border border-v2-border-border-base bg-v2-background-bg-base px-2 py-1 text-12-medium text-v2-text-text-muted hover:text-v2-text-text-base"
+            >
+              {language.t("runtime.command")}
             </A>
           </div>
         )}

@@ -30,6 +30,7 @@ describe("compare model", () => {
       createdAt: 0,
       observation: { models: [], metrics, activity: [] },
     })
+
     // SAFETY: metricRows reads only `runs`; the rest of the record is irrelevant to alignment.
     const info = {
       runs: [
@@ -37,6 +38,7 @@ describe("compare model", () => {
         run("stack-agent", [{ key: "duration", metric: metric(10, "ms") }]),
       ],
     } as unknown as ComparisonInfo
+
     expect(metricRows(info).map((row) => [row.key, row.values.map((value) => value?.value)])).toEqual([
       ["toolCalls", [3, undefined]],
       ["duration", [undefined, 10]],

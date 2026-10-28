@@ -21,6 +21,8 @@ const SettingsScreen = lazy(() => import("@/settings/shell").then((module) => ({
 
 const CompareScreen = lazy(() => import("@/compare/screen").then((module) => ({ default: module.CompareScreen })))
 
+const ImproveScreen = lazy(() => import("@/improve/screen").then((module) => ({ default: module.ImproveScreen })))
+
 const ConnectServerScreen = lazy(() =>
   import("@/servers/connect/screen").then((module) => ({ default: module.ConnectServerScreen })),
 )
@@ -80,6 +82,20 @@ export function AppRoutes() {
               <TargetServerRoute>
                 <SessionPanelFrame raised>
                   <CompareScreen />
+                </SessionPanelFrame>
+              </TargetServerRoute>
+            </Suspense>
+          </SessionRouteFrame>
+        )}
+      />
+      <Route
+        path={["/server/:serverKey/improve", "/server/:serverKey/improve/:id"]}
+        component={() => (
+          <SessionRouteFrame padded>
+            <Suspense fallback={<SessionPanelFrame raised />}>
+              <TargetServerRoute>
+                <SessionPanelFrame raised>
+                  <ImproveScreen />
                 </SessionPanelFrame>
               </TargetServerRoute>
             </Suspense>

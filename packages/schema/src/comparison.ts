@@ -48,7 +48,19 @@ export const Task = Schema.Struct({
 }).annotate({ identifier: "Comparison.Task" })
 export interface Task extends Schema.Schema.Type<typeof Task> {}
 
+/** Marks a comparison run on behalf of an improvement evaluation, so analysis can keep it apart from organic runs. */
+export const Origin = Schema.Struct({
+  improvementID: Schema.String,
+  variant: Schema.Literals(["baseline", "candidate"]),
+}).annotate({ identifier: "Comparison.Origin" })
+export interface Origin extends Schema.Schema.Type<typeof Origin> {}
+
 export const CreateInput = Schema.Struct({
+  /** Reusing an ID adopts the existing comparison instead of starting another, so a retried request is idempotent. */
+  id: optional(ID),
+  /** The commit both workspaces start from. Omitted, the repository's current HEAD. */
+  revision: optional(Schema.String),
+  origin: optional(Origin),
   directory: AbsolutePath,
   task: Task,
   /** Both runs use this model. Omitted, each Session resolves the default model. */
@@ -201,6 +213,7 @@ export const Definition = Schema.Struct({
   stackAgentModel: optional(Model.Ref),
   harnesses: Schema.Array(Harness),
   rerunOf: optional(ID),
+  origin: optional(Origin),
 }).annotate({ identifier: "Comparison.Definition" })
 export interface Definition extends Schema.Schema.Type<typeof Definition> {}
 
@@ -226,6 +239,7 @@ export const Summary = Schema.Struct({
   title: Schema.String,
   createdAt: Schema.Finite,
   directory: AbsolutePath,
+  origin: optional(Origin),
   runs: Schema.Array(Schema.Struct({ harness: Harness, status: RunStatus, outcome: optional(Outcome) })),
 }).annotate({ identifier: "Comparison.Summary" })
 export interface Summary extends Schema.Schema.Type<typeof Summary> {}

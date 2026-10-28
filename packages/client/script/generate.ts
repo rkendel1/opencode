@@ -4,6 +4,7 @@ import { ClientApi, effectOmitEndpoints, groupNames, promiseOmitEndpoints } from
 import { Agent } from "@opencode/schema/agent"
 import { Command } from "@opencode/schema/command"
 import { Comparison } from "@opencode/schema/comparison"
+import { Improvement } from "@opencode/schema/improvement"
 import { Config } from "@opencode/schema/config"
 import { Credential } from "@opencode/schema/credential"
 import { Event } from "@opencode/schema/event"
@@ -72,6 +73,7 @@ const effectTypeReferences = [
   ...namespaceTypes("Project", "@opencode/schema/project", Project),
   ...namespaceTypes("Worktree", "@opencode/schema/worktree", Worktree),
   ...namespaceTypes("Comparison", "@opencode/schema/comparison", Comparison),
+  ...namespaceTypes("Improvement", "@opencode/schema/improvement", Improvement),
   ...namespaceTypes("PromptInput", "@opencode/schema/prompt-input", PromptInput),
   ...namespaceTypes("Provider", "@opencode/schema/provider", Provider),
   ...namespaceTypes("Pty", "@opencode/schema/pty", Pty),

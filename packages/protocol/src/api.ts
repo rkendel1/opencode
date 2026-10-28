@@ -33,6 +33,7 @@ import { CredentialGroup } from "./groups/credential.js"
 import { ProjectGroup } from "./groups/project.js"
 import { WorktreeGroup } from "./groups/worktree.js"
 import { ComparisonGroup } from "./groups/comparison.js"
+import { ImprovementGroup } from "./groups/improvement.js"
 import { VcsGroup } from "./groups/vcs.js"
 import { MigrationGroup } from "./groups/migration.js"
 import { ConfigGroup } from "./groups/config.js"
@@ -100,6 +101,7 @@ type ApiGroups<
   | typeof MigrationGroup
   | typeof WorktreeGroup
   | typeof ComparisonGroup
+  | typeof ImprovementGroup
   | typeof GenerateGroup
   | typeof VoiceGroup
   | typeof ExperimentalGroup
@@ -194,6 +196,7 @@ const makeApiFromGroup = <
     .add(ReferenceGroup.middleware(locationMiddleware))
     .add(WorktreeGroup)
     .add(ComparisonGroup)
+    .add(ImprovementGroup)
     .add(VcsGroup.middleware(locationMiddleware))
     .add(DebugGroup)
     .add(MigrationGroup)

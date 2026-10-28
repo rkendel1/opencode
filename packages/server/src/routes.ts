@@ -16,6 +16,7 @@ import { PersistentPty } from "@opencode/core/persistent-pty"
 import { Project } from "@opencode/core/project"
 import { Worktree } from "@opencode/core/worktree"
 import { Comparison } from "@opencode/core/comparison"
+import { Improvement } from "@opencode/core/improvement"
 import { Session } from "@opencode/core/session"
 import { Instance } from "@opencode/core/instance/service"
 import { SessionTransfer } from "@opencode/core/session/transfer"
@@ -65,6 +66,7 @@ const applicationServiceNodes = [
   Worktree.node,
   Session.node,
   Comparison.node,
+  Improvement.node,
   Instance.node,
   SessionTransfer.node,
   InstructionEntry.node,

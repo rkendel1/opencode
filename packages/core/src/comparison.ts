@@ -8,8 +8,10 @@ import type { SessionMessage } from "@opencode/schema/session-message"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import { AppProcess } from "@opencode/util/process"
 import { App } from "./app.js"
+import { ComparisonCommand } from "./comparison/command.js"
 import { ComparisonObserve } from "./comparison/observe.js"
 import { ComparisonReport } from "./comparison/report.js"
+import { ComparisonSettle } from "./comparison/settle.js"
 import { KV } from "./kv.js"
 import { Project } from "./project.js"
 import { Session } from "./session.js"
@@ -44,12 +46,8 @@ export interface Interface {
 export class Service extends Context.Service<Service, Interface>()("@opencode/Comparison") {}
 
 const HARNESSES: readonly Comparison.Harness[] = ["opencode", "stack-agent"]
-// Verification commands are the evaluator's own; a hung test suite must not hold the report forever.
-const COMMAND_TIMEOUT = "10 minutes"
-const OUTPUT_TAIL = 4000
 const UNTRACKED_LINE_LIMIT = 1_000_000
 const MESSAGE_LIMIT = 100_000
-const SETTLE_POLL = "1 second"
 
 const definitionKey = (id: string) => `comparison/def/${id}`
 const runKey = (id: string, harness: Comparison.Harness) => `comparison/run/${id}/${harness}`
@@ -104,29 +102,7 @@ export const layer = Layer.effect(
         .run(ChildProcess.make(gitExecutable(), args, { cwd, stdin: "ignore" }), { maxOutputBytes: 8 * 1024 * 1024 })
         .pipe(Effect.map((result) => ({ exitCode: result.exitCode, stdout: result.stdout.toString("utf8") })))
 
-    const shell = (cwd: string, command: string) =>
-      Effect.gen(function* () {
-        const started = Date.now()
-        const windows = process.platform === "win32"
-        const result = yield* proc
-          .run(
-            ChildProcess.make(windows ? command : "bash", windows ? [] : ["-lc", command], {
-              cwd,
-              stdin: "ignore",
-              shell: windows,
-              extendEnv: true,
-            }),
-            { combineOutput: true, timeout: COMMAND_TIMEOUT, maxOutputBytes: 1024 * 1024 },
-          )
-          .pipe(
-            Effect.map((result) => ({
-              exitCode: result.exitCode,
-              output: (result.output ?? result.stdout).toString("utf8"),
-            })),
-            Effect.catch((error) => Effect.succeed({ exitCode: -1, output: error.message })),
-          )
-        return { ...result, output: result.output.slice(-OUTPUT_TAIL), durationMs: Date.now() - started }
-      })
+    const shell = (cwd: string, command: string) => ComparisonCommand.run(proc, cwd, command)
 
     // The persisted message projection, not the raw event log: the server only keeps durable events when
     // configured to, while projections are always stored.
@@ -305,21 +281,11 @@ export const layer = Layer.effect(
       yield* watch(definition, harness)
     })
 
-    /**
-     * Waits until the run's Session has no execution and no admitted input left, then evaluates it. Waiting on the
-     * execution alone is not enough: the prompt's wake is scheduled after admission, so the Session can briefly be
-     * idle with the task still queued.
-     */
+    /** Waits until the run's Session settles, then evaluates it. */
     const watch = Effect.fnUntraced(function* (definition: Comparison.Definition, harness: Comparison.Harness) {
       const run = yield* readRun(definition.id, harness)
       if (!run?.sessionID) return
-      const sessionID = run.sessionID
-      while (true) {
-        yield* sessions.wait(sessionID).pipe(Effect.ignore)
-        const pending = yield* sessions.inbox(sessionID).pipe(Effect.orElseSucceed(() => []))
-        if (pending.length === 0 && !(yield* sessions.active).has(sessionID)) break
-        yield* Effect.sleep(SETTLE_POLL)
-      }
+      yield* ComparisonSettle.untilSettled(sessions, run.sessionID)
       yield* evaluate(definition, harness)
     })
 
@@ -474,17 +440,23 @@ export const layer = Layer.effect(
     const create = Effect.fn("Comparison.create")(function* (input: CreateInput) {
       const task = normalize(input.task)
       if (!task.prompt.trim()) return yield* new InvalidInputError({ message: "The task prompt is empty" })
+      if (input.id) {
+        const existing = yield* readDefinition(input.id).pipe(Effect.option)
+        if (existing._tag === "Some") return yield* info(existing.value)
+      }
       const project = yield* projects.resolve(input.directory)
-      const head = yield* git(input.directory, ["rev-parse", "--verify", "HEAD"]).pipe(
+      const head = yield* git(input.directory, ["rev-parse", "--verify", `${input.revision ?? "HEAD"}^{commit}`]).pipe(
         Effect.orElseSucceed(() => ({ exitCode: 1, stdout: "" })),
       )
       if (head.exitCode !== 0)
         return yield* new InvalidInputError({
-          message: "Comparisons need a Git repository with at least one commit, so both workspaces share a revision",
+          message: input.revision
+            ? `Revision ${input.revision} is not a commit in this repository`
+            : "Comparisons need a Git repository with at least one commit, so both workspaces share a revision",
         })
       const branch = yield* git(input.directory, ["rev-parse", "--abbrev-ref", "HEAD"]).pipe(Effect.option)
       const status = yield* git(input.directory, ["status", "--porcelain"]).pipe(Effect.option)
-      const id = Comparison.ID.create()
+      const id = input.id ?? Comparison.ID.create()
       const definition: Comparison.Definition = {
         id,
         createdAt: Date.now(),
@@ -494,13 +466,17 @@ export const layer = Layer.effect(
           projectID: project.id,
           directory: project.directory,
           revision: head.stdout.trim(),
-          branch: branch._tag === "Some" && branch.value.exitCode === 0 ? branch.value.stdout.trim() : undefined,
+          branch:
+            !input.revision && branch._tag === "Some" && branch.value.exitCode === 0
+              ? branch.value.stdout.trim()
+              : undefined,
           dirty: status._tag === "Some" && status.value.stdout.trim() !== "",
         },
         model: input.model,
         stackAgentModel: input.stackAgentModel,
         harnesses: HARNESSES,
         rerunOf: input.rerunOf,
+        origin: input.origin,
       }
       yield* kv.set(definitionKey(id), encodeDefinition(definition) as Schema.Json)
       yield* Effect.forEach(HARNESSES, (harness) =>
@@ -559,6 +535,7 @@ export const layer = Layer.effect(
               title: definition.task.title,
               createdAt: definition.createdAt,
               directory: definition.repository.directory,
+              origin: definition.origin,
               runs: runs
                 .filter((run): run is Comparison.Run => run !== undefined)
                 .map((run) => ({ harness: run.harness, status: run.status, outcome: run.report?.outcome })),

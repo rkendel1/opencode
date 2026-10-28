@@ -16,7 +16,7 @@ import { createStore } from "solid-js/store"
 import { useLanguage } from "@/runtime/i18n/language"
 import { useServerSDK } from "@/runtime/server/client"
 import { useServer } from "@/runtime/server/current"
-import { compareHref, sessionHref } from "@/shell/routes/session"
+import { compareHref, improveHref, sessionHref } from "@/shell/routes/session"
 import { formatServerError } from "@/runtime/server/errors"
 import { formatMetric, HARNESSES, live, metricRows, runFor, settled } from "./model"
 
@@ -89,6 +89,16 @@ function History(props: {
 
   return (
     <div class="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+      <Show when={props.directory}>
+        {(directory) => (
+          <A
+            class="text-[13px] text-v2-text-text-accent underline"
+            href={improveHref(server.key, { directory: directory() })}
+          >
+            {language.t("improve.title")}
+          </A>
+        )}
+      </Show>
       <Show when={props.current}>
         <Button
           variant="outline"

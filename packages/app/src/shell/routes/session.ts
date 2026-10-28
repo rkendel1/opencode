@@ -35,3 +35,9 @@ export function compareHref(server: ServerConnection.Key, input: { id?: string; 
 
   return input.directory ? `${base}?directory=${encodeURIComponent(input.directory)}` : base
 }
+
+/** The Improvement Lab: findings for `directory`, or the persisted improvement `id`. */
+export function improveHref(server: ServerConnection.Key, input: { id?: string; directory?: string }) {
+  const base = `/server/${base64Encode(server)}/improve${input.id ? `/${input.id}` : ""}`
+  return input.directory ? `${base}?directory=${encodeURIComponent(input.directory)}` : base
+}

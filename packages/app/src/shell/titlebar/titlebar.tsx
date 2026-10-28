@@ -389,6 +389,7 @@ export function Titlebar(props: { verticalTabs?: { mount?: HTMLElement } }) {
 
                 case "settings":
                 case "compare":
+                case "improve":
                 case "connect":
                 case "components":
                 case "home": {

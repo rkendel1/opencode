@@ -3,6 +3,7 @@ import { compile, emitEffectImported, emitEffectShape, emitPromise, write } from
 import { ClientApi, effectOmitEndpoints, groupNames, promiseOmitEndpoints } from "@opencode/protocol/client"
 import { Agent } from "@opencode/schema/agent"
 import { Command } from "@opencode/schema/command"
+import { Comparison } from "@opencode/schema/comparison"
 import { Config } from "@opencode/schema/config"
 import { Credential } from "@opencode/schema/credential"
 import { Event } from "@opencode/schema/event"
@@ -70,6 +71,7 @@ const effectTypeReferences = [
   ...namespaceTypes("Plugin", "@opencode/schema/plugin", Plugin),
   ...namespaceTypes("Project", "@opencode/schema/project", Project),
   ...namespaceTypes("Worktree", "@opencode/schema/worktree", Worktree),
+  ...namespaceTypes("Comparison", "@opencode/schema/comparison", Comparison),
   ...namespaceTypes("PromptInput", "@opencode/schema/prompt-input", PromptInput),
   ...namespaceTypes("Provider", "@opencode/schema/provider", Provider),
   ...namespaceTypes("Pty", "@opencode/schema/pty", Pty),

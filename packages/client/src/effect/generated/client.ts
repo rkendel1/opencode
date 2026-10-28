@@ -263,6 +263,15 @@ import type {
   WorktreeRemoveOutput,
   WorktreeRefreshInput,
   WorktreeRefreshOutput,
+  ComparisonListOutput,
+  ComparisonCreateInput,
+  ComparisonCreateOutput,
+  ComparisonGetInput,
+  ComparisonGetOutput,
+  ComparisonCancelInput,
+  ComparisonCancelOutput,
+  ComparisonRerunInput,
+  ComparisonRerunOutput,
   VcsInitInput,
   VcsInitOutput,
   VcsGetInput,
@@ -1643,6 +1652,48 @@ const adaptGroupWorktree = (raw: RawClient["server.worktree"]) => ({
   refresh: EndpointWorktreeRefresh(raw),
 })
 
+const EndpointComparisonList = (raw: RawClient["server.comparison"]) => () =>
+  preserveEffect<ComparisonListOutput>()(raw["comparison.list"]({}).pipe(Effect.mapError(mapClientError)))
+
+const EndpointComparisonCreate = (raw: RawClient["server.comparison"]) => (input: ComparisonCreateInput) =>
+  preserveEffect<ComparisonCreateOutput>()(
+    raw["comparison.create"]({
+      payload: {
+        directory: input["directory"],
+        task: input["task"],
+        model: input["model"],
+        stackAgentModel: input["stackAgentModel"],
+        rerunOf: input["rerunOf"],
+      },
+    }).pipe(Effect.mapError(mapClientError)),
+  )
+
+const EndpointComparisonGet = (raw: RawClient["server.comparison"]) => (input: ComparisonGetInput) =>
+  preserveEffect<ComparisonGetOutput>()(
+    raw["comparison.get"]({ params: { comparisonID: input["comparisonID"] } }).pipe(Effect.mapError(mapClientError)),
+  )
+
+const EndpointComparisonCancel = (raw: RawClient["server.comparison"]) => (input: ComparisonCancelInput) =>
+  preserveEffect<ComparisonCancelOutput>()(
+    raw["comparison.cancel"]({
+      params: { comparisonID: input["comparisonID"] },
+      payload: { harness: input["harness"] },
+    }).pipe(Effect.mapError(mapClientError)),
+  )
+
+const EndpointComparisonRerun = (raw: RawClient["server.comparison"]) => (input: ComparisonRerunInput) =>
+  preserveEffect<ComparisonRerunOutput>()(
+    raw["comparison.rerun"]({ params: { comparisonID: input["comparisonID"] } }).pipe(Effect.mapError(mapClientError)),
+  )
+
+const adaptGroupComparison = (raw: RawClient["server.comparison"]) => ({
+  list: EndpointComparisonList(raw),
+  create: EndpointComparisonCreate(raw),
+  get: EndpointComparisonGet(raw),
+  cancel: EndpointComparisonCancel(raw),
+  rerun: EndpointComparisonRerun(raw),
+})
+
 const EndpointVcsInit = (raw: RawClient["server.vcs"]) => (input?: VcsInitInput) =>
   preserveEffect<VcsInitOutput>()(
     raw["vcs.init"]({ query: { location: input?.["location"], provider: input?.["provider"] } }).pipe(
@@ -1788,6 +1839,7 @@ const adaptClient = (raw: RawClient) => ({
   shell: adaptGroupShell(raw["server.shell"]),
   reference: adaptGroupReference(raw["server.reference"]),
   worktree: adaptGroupWorktree(raw["server.worktree"]),
+  comparison: adaptGroupComparison(raw["server.comparison"]),
   vcs: adaptGroupVcs(raw["server.vcs"]),
   debug: adaptGroupDebug(raw["server.debug"]),
   migration: adaptGroupMigration(raw["server.migration"]),

@@ -321,6 +321,53 @@ export type PersistentPtyHandoff = { directory: string; instanceID: string; tick
 
 export type ReferenceGitSource = { type: "git"; repository: string; branch?: string }
 
+export type ComparisonID = string
+
+export type ComparisonHarness = "opencode" | "stack-agent"
+
+export type ComparisonRunStatus = "preparing" | "running" | "evaluating" | "completed" | "failed-to-start" | "cancelled"
+
+export type ComparisonOutcome = "verified-success" | "partial" | "failed" | "unverified" | "cancelled"
+
+export type ComparisonCategory =
+  | "investigation"
+  | "implementation"
+  | "bug-fix"
+  | "failure-recovery"
+  | "terminal-workflow"
+
+export type ComparisonCriterion = { id: string; description: string; command?: string }
+
+export type ComparisonFact = { key: string; value?: string; source: string }
+
+export type ComparisonMetric = {
+  label: string
+  value?: number
+  unit?: string
+  available: boolean
+  kind: "observed" | "inferred"
+  source: string
+  method: string
+}
+
+export type ComparisonActivity = {
+  messageID: string
+  toolCallID?: string
+  at: number
+  kind: "step" | "tool" | "tool-failed" | "terminal" | "terminal-failed" | "retry"
+  label: string
+  detail?: string
+}
+
+export type ComparisonEvidence = { label: string; command?: string; exitCode?: number; output?: string }
+
+export type ComparisonFileChange = {
+  path: string
+  status: "modified" | "added" | "deleted" | "renamed" | "untracked"
+  additions?: number
+  deletions?: number
+}
+
 export type VcsBranch = { current?: string; default?: string }
 
 export type VcsBase = { name: string; ref: string; source: "reflog" | "default" }
@@ -887,6 +934,36 @@ export type FormMultiselectField1 = {
 
 export type FormAnswer1 = { [x: string]: FormValue1 }
 
+export type ComparisonSummary = {
+  id: ComparisonID
+  title: string
+  createdAt: number
+  directory: AbsolutePath
+  runs: Array<{ harness: ComparisonHarness; status: ComparisonRunStatus; outcome?: ComparisonOutcome }>
+}
+
+export type ComparisonTrial = {
+  harness: ComparisonHarness
+  runs: number
+  outcomes: Array<{ outcome: ComparisonOutcome; count: number }>
+}
+
+export type ComparisonTask = {
+  title: string
+  prompt: string
+  category: ComparisonCategory
+  criteria: Array<ComparisonCriterion>
+}
+
+export type ComparisonCriterionResult = {
+  id: string
+  description: string
+  status: "passed" | "failed" | "unverified" | "not-run"
+  baseline?: "passed" | "failed" | "unverified" | "not-run"
+  regression: boolean
+  evidence: Array<ComparisonEvidence>
+}
+
 export type VcsInfo = { provider?: string; branch: VcsBranch }
 
 export type WebSearchProvider = { id: WebSearchID; name: string }
@@ -958,6 +1035,17 @@ export type SessionMessageCompactionCompleted = {
   summary: string
   cost?: MoneyUSD
   tokens?: TokenUsageInfo
+}
+
+export type ComparisonObservation = {
+  execution?: "succeeded" | "failed" | "interrupted"
+  error?: string
+  startedAt?: number
+  endedAt?: number
+  models: Array<ModelRef>
+  metrics: Array<{ key: string; metric: ComparisonMetric }>
+  activity: Array<ComparisonActivity>
+  claim?: string
 }
 
 export type ProviderSettings = {
@@ -2122,6 +2210,27 @@ export type FormReplied = {
   data: { id: FormID; sessionID: string; answer: FormAnswer1 }
 }
 
+export type ComparisonDefinition = {
+  id: ComparisonID
+  createdAt: number
+  task: ComparisonTask
+  taskKey: string
+  repository: { projectID: ProjectID; directory: AbsolutePath; revision: string; branch?: string; dirty: boolean }
+  model?: ModelRef
+  stackAgentModel?: ModelRef
+  harnesses: Array<ComparisonHarness>
+  rerunOf?: ComparisonID
+}
+
+export type ComparisonReport = {
+  outcome: ComparisonOutcome
+  reason: string
+  criteria: Array<ComparisonCriterionResult>
+  changes: Array<ComparisonFileChange>
+  metrics: Array<{ key: string; metric: ComparisonMetric }>
+  evaluatedAt: number
+}
+
 export type SessionInboxMove = {
   id: SessionMessageID
   sessionID: SessionID
@@ -2507,6 +2616,20 @@ export type CredentialEntry = {
 
 export type FormFields2 = [FormField1, ...Array<FormField1>]
 
+export type ComparisonRun = {
+  harness: ComparisonHarness
+  status: ComparisonRunStatus
+  sessionID?: SessionID
+  directory?: AbsolutePath
+  environment: Array<ComparisonFact>
+  baseline: Array<{ id: string; status: "passed" | "failed" | "unverified" | "not-run"; exitCode?: number }>
+  cancelRequested: boolean
+  error?: string
+  createdAt: number
+  observation?: ComparisonObservation
+  report?: ComparisonReport
+}
+
 export type AgentInfo = {
   id: AgentID
   name: string
@@ -2581,6 +2704,13 @@ export type IntegrationExternalMethod = { id: IntegrationMethodID; type: "extern
 export type GenerateDecisionsResponse = { data: GenerateDecisionResult }
 
 export type FormInfo1 = { id: FormID; sessionID: string; title: string; metadata?: FormMetadata1; fields: FormFields2 }
+
+export type ComparisonInfo = {
+  definition: ComparisonDefinition
+  runs: Array<ComparisonRun>
+  qualifications: Array<string>
+  trials: Array<ComparisonTrial>
+}
 
 export type SessionMessageInfo =
   | SessionMessageAgentSelected
@@ -3068,6 +3198,14 @@ export type WorktreeError = {
 }
 export const isWorktreeError = (value: unknown): value is WorktreeError =>
   typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "WorktreeError"
+
+export type ComparisonNotFoundError = {
+  readonly _tag: "ComparisonNotFoundError"
+  readonly comparisonID: string
+  readonly message: string
+}
+export const isComparisonNotFoundError = (value: unknown): value is ComparisonNotFoundError =>
+  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "ComparisonNotFoundError"
 
 export type VcsInitNotSupportedError = {
   readonly _tag: "VcsInitNotSupportedError"
@@ -4414,6 +4552,38 @@ export type WorktreeRemoveOutput = void
 export type WorktreeRefreshInput = { readonly projectID: string }
 
 export type WorktreeRefreshOutput = void
+
+export type ComparisonListOutput = Array<ComparisonSummary>
+
+export type ComparisonCreateInput = {
+  readonly directory: string
+  readonly task: {
+    readonly title: string
+    readonly prompt: string
+    readonly category: "investigation" | "implementation" | "bug-fix" | "failure-recovery" | "terminal-workflow"
+    readonly criteria: ReadonlyArray<{ readonly id: string; readonly description: string; readonly command?: string }>
+  }
+  readonly model?: { readonly id: string; readonly providerID: string; readonly variant?: string } | undefined
+  readonly stackAgentModel?: { readonly id: string; readonly providerID: string; readonly variant?: string } | undefined
+  readonly rerunOf?: string | undefined
+}
+
+export type ComparisonCreateOutput = ComparisonInfo
+
+export type ComparisonGetInput = { readonly comparisonID: string }
+
+export type ComparisonGetOutput = ComparisonInfo
+
+export type ComparisonCancelInput = {
+  readonly comparisonID: string
+  readonly harness?: ("opencode" | "stack-agent") | undefined
+}
+
+export type ComparisonCancelOutput = ComparisonInfo
+
+export type ComparisonRerunInput = { readonly comparisonID: string }
+
+export type ComparisonRerunOutput = ComparisonInfo
 
 export type VcsInitInput = {
   readonly location?: { readonly directory?: string | undefined } | undefined

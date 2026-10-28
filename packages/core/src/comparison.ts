@@ -15,6 +15,7 @@ import { ComparisonSettle } from "./comparison/settle.js"
 import { KV } from "./kv.js"
 import { Project } from "./project.js"
 import { Session } from "./session.js"
+import { StackAgentRuntime } from "./stack-agent-runtime.js"
 import { gitExecutable } from "./util/git-executable.js"
 import { Worktree } from "./worktree.js"
 
@@ -66,6 +67,7 @@ export const layer = Layer.effect(
     const projects = yield* Project.Service
     const proc = yield* AppProcess.Service
     const app = yield* App.Metadata
+    const runtime = yield* StackAgentRuntime.Service
     const scope = yield* Scope.Scope
 
     const readDefinition = Effect.fnUntraced(function* (id: string) {
@@ -194,22 +196,37 @@ export const layer = Layer.effect(
         { key: "Permissions", value: "Project defaults", source: "Session.create without a permission override" },
       ]
       if (harness === "opencode") return facts
-      const binary = process.env.STACK_AGENT_BIN ?? "stack-agent"
-      const resolved = Bun.which(binary)
-      const version = resolved
-        ? yield* proc
-            .run(ChildProcess.make(resolved, ["--version"], { cwd: directory, stdin: "ignore" }), {
-              timeout: "5 seconds",
-            })
-            .pipe(
-              Effect.map((result) => (result.exitCode === 0 ? result.stdout.toString("utf8").trim() : undefined)),
-              Effect.orElseSucceed(() => undefined),
-            )
-        : undefined
+      const resolved = yield* runtime.resolve(definition.stackAgentGeneration).pipe(Effect.option)
+      const executable =
+        resolved._tag === "Some" && (yield* Effect.promise(() => Bun.file(resolved.value.executable).exists()))
+          ? resolved.value
+          : undefined
+      const version =
+        executable?.version ??
+        (executable
+          ? yield* proc
+              .run(ChildProcess.make(executable.executable, ["--version"], { cwd: directory, stdin: "ignore" }), {
+                timeout: "5 seconds",
+              })
+              .pipe(
+                Effect.map((result) => (result.exitCode === 0 ? result.stdout.toString("utf8").trim() : undefined)),
+                Effect.orElseSucceed(() => undefined),
+              )
+          : undefined)
       const pax = Bun.which("pax")
       return [
         ...facts,
-        { key: "stack-agent binary", value: resolved ?? undefined, source: "STACK_AGENT_BIN or PATH" },
+        {
+          key: "stack-agent binary",
+          value: executable?.executable,
+          source: "Stack-Agent runtime manager (pinned, active, or STACK_AGENT_BIN / PATH fallback)",
+        },
+        {
+          key: "stack-agent generation",
+          value: executable ? (executable.generation ?? "unmanaged") : undefined,
+          source: executable?.source ? `Resolved as ${executable.source}` : "Stack-Agent runtime manager",
+        },
+        { key: "stack-agent commit", value: executable?.commit, source: "Build record of the generation" },
         { key: "stack-agent version", value: version, source: "stack-agent --version" },
         {
           key: "PAX",
@@ -269,7 +286,13 @@ export const layer = Layer.effect(
         location: { directory },
         title: `${definition.task.title} · ${harness}`,
         model,
-        metadata: { harness, comparisonID: definition.id },
+        metadata: {
+          harness,
+          comparisonID: definition.id,
+          ...(harness === "stack-agent" && definition.stackAgentGeneration
+            ? { [StackAgentRuntime.PIN]: definition.stackAgentGeneration }
+            : {}),
+        },
       })
       yield* updateRun(definition.id, harness, (run) => ({ ...run, sessionID: session.id, status: "running" }))
       if (yield* cancelled) return
@@ -408,8 +431,18 @@ export const layer = Layer.effect(
           ...observation.metrics,
         ],
       }
+      // What actually executed, which can differ from the resolution at start if a generation was activated between.
+      const used = harness === "stack-agent" ? yield* runtime.usage(run.sessionID) : undefined
+      const executed = [...new Set((used?.runs ?? []).map((item) => item.generation ?? `unmanaged ${item.executable}`))]
       yield* updateRun(definition.id, harness, (run) => ({
         ...run,
+        environment:
+          executed.length > 0
+            ? [
+                ...run.environment.filter((fact) => fact.key !== "Executed by"),
+                { key: "Executed by", value: executed.join(", "), source: "Stack-Agent runtime usage record" },
+              ]
+            : run.environment,
         status: cancelled ? "cancelled" : "completed",
         error: run.error ?? observation.error,
         observation,
@@ -477,6 +510,7 @@ export const layer = Layer.effect(
         harnesses: HARNESSES,
         rerunOf: input.rerunOf,
         origin: input.origin,
+        stackAgentGeneration: input.stackAgentGeneration,
       }
       yield* kv.set(definitionKey(id), encodeDefinition(definition) as Schema.Json)
       yield* Effect.forEach(HARNESSES, (harness) =>
@@ -557,6 +591,7 @@ export const layer = Layer.effect(
           model: definition.model,
           stackAgentModel: definition.stackAgentModel,
           rerunOf: definition.id,
+          stackAgentGeneration: definition.stackAgentGeneration,
         })
       }),
     })
@@ -566,7 +601,7 @@ export const layer = Layer.effect(
 export const node = makeGlobalNode({
   service: Service,
   layer,
-  deps: [KV.node, Session.node, Worktree.node, Project.node, AppProcess.node, App.node],
+  deps: [KV.node, Session.node, Worktree.node, Project.node, AppProcess.node, App.node, StackAgentRuntime.node],
 })
 
 function normalize(task: Comparison.Task): Comparison.Task {

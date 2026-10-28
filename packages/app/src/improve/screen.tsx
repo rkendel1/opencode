@@ -6,6 +6,7 @@ import type {
   ImprovementInfo,
   ImprovementInvestigation,
   ImprovementProposal,
+  ImprovementTarget,
 } from "@opencode/client/promise"
 import { Badge } from "@opencode/ui/badge"
 import { Button } from "@opencode/ui/button"
@@ -18,13 +19,15 @@ import { useLanguage } from "@/runtime/i18n/language"
 import { useServerSDK } from "@/runtime/server/client"
 import { useServer } from "@/runtime/server/current"
 import { formatServerError } from "@/runtime/server/errors"
-import { compareHref, improveHref, sessionHref } from "@/shell/routes/session"
+import { compareHref, improveHref, runtimeHref, sessionHref } from "@/shell/routes/session"
 import { lifecycle, live, validated } from "./model"
 
 // The pipeline runs on the server; the page polls its record while a stage is in progress.
 const POLL_MS = 2000
 
 const RUNTIMES: ComparisonHarness[] = ["opencode", "stack-agent"]
+
+const TARGETS: ImprovementTarget[] = ["project", "stack-agent"]
 
 const DECISIONS: ImprovementDecision[] = ["accept", "reject", "inconclusive"]
 
@@ -83,6 +86,9 @@ export function ImproveScreen() {
                 </A>
               )}
             </Show>
+            <A class="text-[13px] text-v2-text-text-accent underline" href={runtimeHref(server.key)}>
+              {language.t("runtime.title")}
+            </A>
             <Show when={items().length > 0}>
               <Select
                 data-action="improvement-history"
@@ -201,7 +207,12 @@ function FindingCard(props: {
   const server = useServer()
   const language = useLanguage()
   const navigate = useNavigate()
-  const [store, setStore] = createStore<{ busy: boolean; error?: string }>({ busy: false })
+
+  const [store, setStore] = createStore<{ busy: boolean; error?: string; target: ImprovementTarget }>({
+    busy: false,
+    target: "project",
+  })
+
   const finding = () => props.finding
 
   const investigate = async () => {
@@ -209,7 +220,7 @@ function FindingCard(props: {
     setStore({ busy: true, error: undefined })
 
     const created = await sdk.api.improvement
-      .create({ directory: props.directory, findingID: finding().id })
+      .create({ directory: props.directory, findingID: finding().id, target: store.target })
       .catch((cause: unknown) => {
         setStore({ busy: false, error: formatServerError(cause, language.t, language.t("common.requestFailed")) })
 
@@ -239,15 +250,26 @@ function FindingCard(props: {
           </div>
         </div>
         <Show when={!props.snapshot}>
-          <Button
-            variant="submit"
-            size="small"
-            disabled={store.busy || finding().needsMoreEvidence}
-            title={finding().needsMoreEvidence ? language.t("improve.investigate.blocked") : undefined}
-            onClick={() => void investigate()}
-          >
-            {language.t("improve.investigate")}
-          </Button>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-[12px] text-v2-text-text-muted">{language.t("improve.target")}</span>
+            <Select
+              data-action="improvement-target"
+              options={TARGETS}
+              current={store.target}
+              gutter={6}
+              label={(target) => language.t(`improve.target.${target}`)}
+              onSelect={(target) => target && setStore("target", target)}
+            />
+            <Button
+              variant="submit"
+              size="small"
+              disabled={store.busy || finding().needsMoreEvidence}
+              title={finding().needsMoreEvidence ? language.t("improve.investigate.blocked") : undefined}
+              onClick={() => void investigate()}
+            >
+              {language.t("improve.investigate")}
+            </Button>
+          </div>
         </Show>
       </header>
       <Labeled state="observed">{finding().statement}</Labeled>
@@ -404,6 +426,9 @@ function ImprovementView(props: { id: string; onChanged: () => void }) {
           <Show when={value().state.evaluation}>
             <EvaluationView info={value()} />
           </Show>
+          <Show when={value().definition.target === "stack-agent" && value().state.evaluation?.status === "completed"}>
+            <ApplyPanel info={value()} onChanged={(next) => mutate(next)} act={act} />
+          </Show>
           <Show when={value().state.stage === "evaluated" || value().state.stage === "decided"}>
             <Decision
               info={value()}
@@ -413,6 +438,238 @@ function ImprovementView(props: { id: string; onChanged: () => void }) {
         </div>
       )}
     </Show>
+  )
+}
+
+function runtimeLabel(ref?: { pin: string; commit?: string; version?: string }) {
+  if (!ref) return "—"
+
+  return [ref.version ?? ref.pin, ref.commit?.slice(0, 12)].filter(Boolean).join(" @ ")
+}
+
+function ApplyPanel(props: {
+  info: ImprovementInfo
+  onChanged: (next: ImprovementInfo) => void
+  act: (run: () => Promise<ImprovementInfo>) => Promise<void>
+}) {
+  const sdk = useServerSDK()
+  const server = useServer()
+  const language = useLanguage()
+  const id = () => props.info.definition.id
+  const application = () => props.info.state.application
+
+  const [preview, { refetch }] = createResource(
+    () => `${id()}:${application()?.status ?? "none"}`,
+    () => sdk.api.improvement.preview({ improvementID: id() }),
+  )
+
+  const [runtime, { refetch: refetchRuntime }] = createResource(() => sdk.api.stackAgent.status())
+  const [store, setStore] = createStore({ confirmed: false })
+  const current = () => (preview.state === "ready" || preview.state === "refreshing" ? preview.latest : undefined)
+
+  const build = () =>
+    runtime.state === "ready" || runtime.state === "refreshing"
+      ? runtime.latest?.generations.find((item) => item.id === application()?.build)
+      : undefined
+
+  const active = () =>
+    (runtime.state === "ready" || runtime.state === "refreshing") &&
+    runtime.latest?.state.active === application()?.build
+
+  createEffect(() => {
+    if (!application()?.build || build()?.status === "validated" || build()?.status === "failed") return
+    const timer = setInterval(() => void refetchRuntime(), POLL_MS)
+    onCleanup(() => clearInterval(timer))
+  })
+
+  return (
+    <Panel
+      title={language.t("apply.title")}
+      state="implemented"
+      aside={
+        <Show when={application()}>
+          {(value) => <Badge variant="subtle">{language.t(`apply.status.${value().status}`)}</Badge>}
+        </Show>
+      }
+    >
+      <Show when={current()}>
+        {(value) => (
+          <div class="flex flex-col gap-1 text-[13px]" data-component="apply-preview">
+            <p>
+              {language.t("apply.repository")}: <code class="text-[12px]">{value().sourceDirectory}</code>
+            </p>
+            <p>
+              {language.t("apply.branch", { branch: value().targetBranch, tip: value().tip?.slice(0, 12) ?? "—" })}
+              {" · "}
+              {language.t("apply.tested", { tested: value().tested.slice(0, 12) })}
+            </p>
+            <p classList={{ "text-v2-state-fg-warning": value().drift, "text-v2-text-text-muted": !value().drift }}>
+              {language.t(value().drift ? "apply.drift" : "apply.noDrift")}
+            </p>
+            <Show when={value().conflicts.length > 0}>
+              <p class="text-v2-state-fg-danger">
+                {language.t("apply.conflicts", { files: value().conflicts.join(", ") })}
+              </p>
+            </Show>
+            <p>
+              {language.t("apply.files")}: <code class="text-[12px]">{value().files.join(", ")}</code>
+            </p>
+            <p>
+              {language.t("apply.verdict", {
+                verdict: language.t(`improve.verdict.${props.info.state.evaluation?.verdict ?? "inconclusive"}`),
+              })}
+            </p>
+            <Show when={value().blocker}>{(blocker) => <p class="text-v2-state-fg-warning">{blocker()}</p>}</Show>
+          </div>
+        )}
+      </Show>
+      <Show when={!application() || application()!.status === "conflict" || application()!.status === "failed"}>
+        <div class="flex flex-col gap-2 rounded-md bg-v2-background-bg-deep p-3">
+          <label class="flex items-start gap-2 text-[12px]">
+            <input
+              type="checkbox"
+              checked={store.confirmed}
+              onChange={(event) => setStore("confirmed", event.currentTarget.checked)}
+            />
+            {language.t("apply.confirm")}
+          </label>
+          <div>
+            <Button
+              variant="submit"
+              size="small"
+              disabled={!store.confirmed || !!current()?.blocker || (current()?.conflicts.length ?? 0) > 0}
+              onClick={() =>
+                void props.act(() => sdk.api.improvement.apply({ improvementID: id() })).then(() => refetch())
+              }
+            >
+              {language.t("apply.action")}
+            </Button>
+          </div>
+        </div>
+      </Show>
+      <Show when={application()?.status === "applying"}>
+        <p class="flex items-center gap-2 text-[13px] text-v2-text-text-muted">
+          <Loader class="size-4" />
+          {language.t("apply.applying")}
+        </p>
+      </Show>
+      <Show when={application()?.error}>{(error) => <p class="text-[13px] text-v2-state-fg-danger">{error()}</p>}</Show>
+      <Show when={application()?.commit}>
+        {(commit) => (
+          <div class="flex flex-col gap-2 text-[13px]">
+            <code class="text-[12px] text-v2-text-text-muted">
+              {language.t("apply.result", { branch: application()!.branch ?? "", commit: commit().slice(0, 12) })}
+            </code>
+            <p class={application()!.sameSource ? "text-v2-text-text-muted" : "text-v2-state-fg-warning"}>
+              {language.t(application()!.sameSource ? "apply.sameSource" : "apply.differentSource")}
+            </p>
+            <Show when={application()!.checks.length > 0}>
+              <div class="flex flex-col gap-0.5 text-[12px]">
+                <span class="font-medium">{language.t("apply.checks")}</span>
+                <For each={application()!.checks}>
+                  {(check) => (
+                    <code
+                      classList={{ "text-v2-state-fg-success": check.passed, "text-v2-state-fg-danger": !check.passed }}
+                    >
+                      $ {check.command} → {check.exitCode}
+                    </code>
+                  )}
+                </For>
+              </div>
+            </Show>
+            <Show when={application()!.diff}>
+              {(diff) => (
+                <details>
+                  <summary class="cursor-pointer text-[12px] text-v2-text-text-muted">
+                    {language.t("apply.diff")}
+                  </summary>
+                  <pre
+                    class="max-h-64 overflow-auto rounded bg-v2-background-bg-deep p-2 font-mono text-[12px]"
+                    data-scrollable
+                  >
+                    {diff()}
+                  </pre>
+                </details>
+              )}
+            </Show>
+            <div class="flex flex-wrap items-center gap-2">
+              <Show
+                when={application()!.published}
+                fallback={
+                  <Show
+                    when={current()?.remote}
+                    fallback={
+                      <span class="text-[12px] text-v2-text-text-faint">{language.t("apply.publish.none")}</span>
+                    }
+                  >
+                    {(remote) => (
+                      <Button
+                        variant="outline"
+                        size="small"
+                        disabled={application()!.status !== "applied"}
+                        onClick={() => void props.act(() => sdk.api.improvement.publish({ improvementID: id() }))}
+                      >
+                        {language.t("apply.publish", { remote: remote() })}
+                      </Button>
+                    )}
+                  </Show>
+                }
+              >
+                {(published) => (
+                  <span class="text-[12px] text-v2-state-fg-success">
+                    {language.t("apply.published", { remote: published().remote })}
+                  </span>
+                )}
+              </Show>
+              <Show when={!application()!.build}>
+                <Button
+                  variant="submit"
+                  size="small"
+                  disabled={application()!.status !== "applied"}
+                  onClick={() =>
+                    void props
+                      .act(() => sdk.api.improvement.stage({ improvementID: id() }))
+                      .then(() => refetchRuntime())
+                  }
+                >
+                  {language.t("apply.stage")}
+                </Button>
+              </Show>
+              <Show when={application()!.build}>
+                {(generation) => (
+                  <>
+                    <span class="flex items-center gap-1 text-[12px]">
+                      <Show when={build() && build()!.status !== "validated" && build()!.status !== "failed"}>
+                        <Loader class="size-3" />
+                      </Show>
+                      {language.t("apply.build", {
+                        generation: generation(),
+                        status: build() ? language.t(`runtime.generation.status.${build()!.status}`) : "…",
+                      })}
+                    </span>
+                    <Show when={!active()} fallback={<Badge variant="accent">{language.t("apply.active")}</Badge>}>
+                      <Button
+                        variant="submit"
+                        size="small"
+                        disabled={build()?.status !== "validated"}
+                        onClick={() =>
+                          void sdk.api.stackAgent.activate({ generation: generation() }).then(() => refetchRuntime())
+                        }
+                      >
+                        {language.t("apply.activate")}
+                      </Button>
+                    </Show>
+                  </>
+                )}
+              </Show>
+              <A class="text-[12px] text-v2-text-text-accent underline" href={runtimeHref(server.key)}>
+                {language.t("apply.runtimePage")}
+              </A>
+            </div>
+          </div>
+        )}
+      </Show>
+    </Panel>
   )
 }
 
@@ -444,7 +701,8 @@ function Stepper(props: { info: ImprovementInfo }) {
           </li>
         )}
       </For>
-      <li class="ms-auto">
+      <li class="ms-auto flex gap-1">
+        <Badge>{language.t(`improve.target.${props.info.definition.target ?? "project"}`)}</Badge>
         <Badge variant="subtle">{language.t(`improve.stage.${props.info.state.stage}`)}</Badge>
       </li>
     </ol>
@@ -762,6 +1020,17 @@ function EvaluationView(props: { info: ImprovementInfo }) {
         fallback={<p class="text-[13px] text-v2-text-text-muted">{language.t("improve.evaluation.pending")}</p>}
       >
         <p class="text-[13px]">{evaluation().reason}</p>
+        <Show when={evaluation().runtime}>
+          {(runtime) => (
+            <p class="text-[12px] text-v2-text-text-muted">
+              {language.t("improve.evaluation.runtime")}:{" "}
+              {language.t("improve.evaluation.runtime.detail", {
+                baseline: runtimeLabel(runtime().baseline),
+                candidate: runtimeLabel(runtime().candidate),
+              })}
+            </p>
+          )}
+        </Show>
         <div class="overflow-x-auto" data-scrollable>
           <table class="w-full min-w-[560px] text-left text-[13px]">
             <thead class="text-[12px] text-v2-text-text-muted">

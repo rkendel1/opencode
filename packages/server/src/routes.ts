@@ -17,6 +17,7 @@ import { Project } from "@opencode/core/project"
 import { Worktree } from "@opencode/core/worktree"
 import { Comparison } from "@opencode/core/comparison"
 import { Improvement } from "@opencode/core/improvement"
+import { StackAgentRuntime } from "@opencode/core/stack-agent-runtime"
 import { Session } from "@opencode/core/session"
 import { Instance } from "@opencode/core/instance/service"
 import { SessionTransfer } from "@opencode/core/session/transfer"
@@ -67,6 +68,7 @@ const applicationServiceNodes = [
   Session.node,
   Comparison.node,
   Improvement.node,
+  StackAgentRuntime.node,
   Instance.node,
   SessionTransfer.node,
   InstructionEntry.node,

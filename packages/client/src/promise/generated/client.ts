@@ -285,6 +285,26 @@ import type {
   ImprovementApproveOutput,
   ImprovementDecideInput,
   ImprovementDecideOutput,
+  ImprovementPreviewInput,
+  ImprovementPreviewOutput,
+  ImprovementApplyInput,
+  ImprovementApplyOutput,
+  ImprovementStageInput,
+  ImprovementStageOutput,
+  ImprovementPublishInput,
+  ImprovementPublishOutput,
+  StackAgentStatusOutput,
+  StackAgentConfigureInput,
+  StackAgentConfigureOutput,
+  StackAgentCheckInput,
+  StackAgentCheckOutput,
+  StackAgentBuildInput,
+  StackAgentBuildOutput,
+  StackAgentActivateInput,
+  StackAgentActivateOutput,
+  StackAgentRollbackOutput,
+  StackAgentUsageInput,
+  StackAgentUsageOutput,
   VcsInitInput,
   VcsInitOutput,
   VcsGetInput,
@@ -2273,6 +2293,7 @@ export function make(options: ClientOptions) {
               id: input["id"],
               revision: input["revision"],
               origin: input["origin"],
+              stackAgentGeneration: input["stackAgentGeneration"],
               directory: input["directory"],
               task: input["task"],
               model: input["model"],
@@ -2343,7 +2364,7 @@ export function make(options: ClientOptions) {
           {
             method: "POST",
             path: `/api/improvement`,
-            body: { directory: input["directory"], findingID: input["findingID"] },
+            body: { directory: input["directory"], findingID: input["findingID"], target: input["target"] },
             successStatus: 200,
             declaredStatuses: [400, 401],
             empty: false,
@@ -2392,6 +2413,135 @@ export function make(options: ClientOptions) {
             body: { decision: input["decision"], note: input["note"] },
             successStatus: 200,
             declaredStatuses: [400, 401, 404],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      preview: (input: ImprovementPreviewInput, requestOptions?: RequestOptions) =>
+        request<ImprovementPreviewOutput>(
+          {
+            method: "GET",
+            path: `/api/improvement/${encodeURIComponent(input.improvementID)}/apply`,
+            successStatus: 200,
+            declaredStatuses: [400, 401, 404],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      apply: (input: ImprovementApplyInput, requestOptions?: RequestOptions) =>
+        request<ImprovementApplyOutput>(
+          {
+            method: "POST",
+            path: `/api/improvement/${encodeURIComponent(input.improvementID)}/apply`,
+            successStatus: 200,
+            declaredStatuses: [400, 401, 404],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      stage: (input: ImprovementStageInput, requestOptions?: RequestOptions) =>
+        request<ImprovementStageOutput>(
+          {
+            method: "POST",
+            path: `/api/improvement/${encodeURIComponent(input.improvementID)}/stage`,
+            successStatus: 200,
+            declaredStatuses: [400, 401, 404],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      publish: (input: ImprovementPublishInput, requestOptions?: RequestOptions) =>
+        request<ImprovementPublishOutput>(
+          {
+            method: "POST",
+            path: `/api/improvement/${encodeURIComponent(input.improvementID)}/publish`,
+            successStatus: 200,
+            declaredStatuses: [400, 401, 404],
+            empty: false,
+          },
+          requestOptions,
+        ),
+    },
+    stackAgent: {
+      status: (requestOptions?: RequestOptions) =>
+        request<StackAgentStatusOutput>(
+          { method: "GET", path: `/api/stack-agent`, successStatus: 200, declaredStatuses: [400, 401], empty: false },
+          requestOptions,
+        ),
+      configure: (input?: StackAgentConfigureInput, requestOptions?: RequestOptions) =>
+        request<StackAgentConfigureOutput>(
+          {
+            method: "PATCH",
+            path: `/api/stack-agent/settings`,
+            body: {
+              sourceDirectory: input?.["sourceDirectory"],
+              branch: input?.["branch"],
+              buildCommand: input?.["buildCommand"],
+              artifact: input?.["artifact"],
+              smoke: input?.["smoke"],
+              checks: input?.["checks"],
+              remote: input?.["remote"],
+            },
+            successStatus: 200,
+            declaredStatuses: [400, 401],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      check: (input?: StackAgentCheckInput, requestOptions?: RequestOptions) =>
+        request<StackAgentCheckOutput>(
+          {
+            method: "POST",
+            path: `/api/stack-agent/check`,
+            body: { fetch: input?.["fetch"] },
+            successStatus: 200,
+            declaredStatuses: [400, 401],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      build: (input?: StackAgentBuildInput, requestOptions?: RequestOptions) =>
+        request<StackAgentBuildOutput>(
+          {
+            method: "POST",
+            path: `/api/stack-agent/build`,
+            body: { revision: input?.["revision"] },
+            successStatus: 200,
+            declaredStatuses: [400, 401, 409],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      activate: (input: StackAgentActivateInput, requestOptions?: RequestOptions) =>
+        request<StackAgentActivateOutput>(
+          {
+            method: "POST",
+            path: `/api/stack-agent/activate`,
+            body: { generation: input["generation"] },
+            successStatus: 200,
+            declaredStatuses: [400, 401],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      rollback: (requestOptions?: RequestOptions) =>
+        request<StackAgentRollbackOutput>(
+          {
+            method: "POST",
+            path: `/api/stack-agent/rollback`,
+            successStatus: 200,
+            declaredStatuses: [400, 401],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      usage: (input: StackAgentUsageInput, requestOptions?: RequestOptions) =>
+        request<StackAgentUsageOutput>(
+          {
+            method: "GET",
+            path: `/api/stack-agent/usage/${encodeURIComponent(input.sessionID)}`,
+            successStatus: 200,
+            declaredStatuses: [400, 401],
             empty: false,
           },
           requestOptions,

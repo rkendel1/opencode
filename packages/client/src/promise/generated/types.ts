@@ -393,6 +393,10 @@ export type ImprovementStage =
   | "evaluated"
   | "decided"
 
+export type ImprovementTarget = "project" | "stack-agent"
+
+export type ImprovementRuntimeRef = { pin: string; commit?: string; version?: string }
+
 export type ImprovementCheck = {
   id: string
   description: string
@@ -400,6 +404,26 @@ export type ImprovementCheck = {
   passed: boolean
   exitCode: number
   output: string
+}
+
+export type StackAgentRuntimeEvent = {
+  at: number
+  kind: "built" | "build-failed" | "activated" | "activation-failed" | "rolled-back" | "interrupted"
+  generation?: string
+  previous?: string
+  message: string
+}
+
+export type StackAgentRuntimeGenerationStatus = "building" | "validating" | "validated" | "failed"
+
+export type StackAgentRuntimeCommandResult = { command: string; exitCode: number; output: string; durationMs: number }
+
+export type StackAgentRuntimeResolved = {
+  generation?: string
+  commit?: string
+  version?: string
+  executable: string
+  source: "pinned" | "active" | "external"
 }
 
 export type VcsBranch = { current?: string; default?: string }
@@ -441,6 +465,28 @@ export type WorktreeDirectory = { directory: AbsolutePath; strategy?: string }
 
 export type WorktreeInfo = { directory: AbsolutePath }
 
+export type ImprovementApplyPreview = {
+  sourceDirectory: AbsolutePath
+  targetBranch: string
+  tip?: string
+  tested: string
+  drift: boolean
+  conflicts: Array<string>
+  files: Array<string>
+  remote?: string
+  blocker?: string
+}
+
+export type StackAgentRuntimeSettings = {
+  sourceDirectory?: AbsolutePath
+  branch: string
+  buildCommand: Array<string>
+  artifact: string
+  smoke: Array<Array<string>>
+  checks: Array<Array<string>>
+  remote?: string
+}
+
 export type LocationPublicInfo = {
   directory: AbsolutePath
   project: { id: ProjectID; directory: AbsolutePath; canonical: AbsolutePath }
@@ -461,6 +507,20 @@ export type ConfigModelVariantSettings = { compaction?: ProviderCompaction; enco
 export type PermissionRule = { action: string; resource: string; effect: PermissionEffect }
 
 export type PluginInfo = { id?: PluginID; source: PluginSource; features: PluginFeatures; state: PluginState }
+
+export type StackAgentRuntimeUsage = {
+  sessionID: SessionID
+  runs: Array<{
+    generation?: string
+    commit?: string
+    version?: string
+    executable: string
+    source: "pinned" | "active" | "external"
+    startedAt: number
+    endedAt?: number
+    exitCode?: number
+  }>
+}
 
 export type SessionForkBoundary =
   | { type: "before"; messageID: SessionMessageID }
@@ -1086,6 +1146,52 @@ export type ImprovementImplementation = {
   changes: Array<ComparisonFileChange>
   checks: Array<ImprovementCheck>
   error?: string
+  generation?: string
+}
+
+export type ImprovementApplication = {
+  status: "applying" | "applied" | "conflict" | "failed"
+  sourceDirectory: AbsolutePath
+  targetBranch: string
+  tip: string
+  tested: string
+  drift: boolean
+  conflicts: Array<string>
+  directory?: AbsolutePath
+  branch?: string
+  commit?: string
+  sameSource?: boolean
+  diff?: string
+  diffTruncated: boolean
+  checks: Array<ImprovementCheck>
+  error?: string
+  appliedAt?: number
+  build?: string
+  published?: { remote: string; at: number; output: string }
+}
+
+export type StackAgentRuntimeState = {
+  active?: string
+  previous: Array<string>
+  operation?: { kind: "build"; generation: string; startedAt: number }
+  lastCheck?: { at: number; branch: string; tip?: string; error?: string }
+  events: Array<StackAgentRuntimeEvent>
+}
+
+export type StackAgentRuntimeGeneration = {
+  id: string
+  commit: string
+  tree: string
+  sourceDirectory: AbsolutePath
+  createdAt: number
+  status: StackAgentRuntimeGenerationStatus
+  executable?: AbsolutePath
+  sha256?: string
+  version?: string
+  build?: StackAgentRuntimeCommandResult
+  smoke: Array<StackAgentRuntimeCommandResult>
+  error?: string
+  origin?: { improvementID: string; purpose: string }
 }
 
 export type VcsInfo = { provider?: string; branch: VcsBranch }
@@ -2343,6 +2449,7 @@ export type ImprovementPlan = {
   taskKeys: Array<string>
   targetRuntimes: Array<ComparisonHarness>
   runs: Array<ImprovementPlannedRun>
+  baselineRuntime?: ImprovementRuntimeRef
 }
 
 export type ImprovementInvestigation = {
@@ -2359,6 +2466,7 @@ export type ImprovementEvaluation = {
   results: Array<ImprovementHarnessResult>
   verdict?: ImprovementDisposition
   reason?: string
+  runtime?: { baseline?: ImprovementRuntimeRef; candidate?: ImprovementRuntimeRef }
 }
 
 export type ImprovementFinding = {
@@ -2405,6 +2513,7 @@ export type ComparisonDefinition = {
   harnesses: Array<ComparisonHarness>
   rerunOf?: ComparisonID
   origin?: ComparisonOrigin
+  stackAgentGeneration?: string
 }
 
 export type ComparisonReport = {
@@ -2414,6 +2523,14 @@ export type ComparisonReport = {
   changes: Array<ComparisonFileChange>
   metrics: Array<{ key: string; metric: ComparisonMetric }>
   evaluatedAt: number
+}
+
+export type StackAgentRuntimeStatus = {
+  settings: StackAgentRuntimeSettings
+  state: StackAgentRuntimeState
+  generations: Array<StackAgentRuntimeGeneration>
+  current: StackAgentRuntimeResolved
+  running: Array<{ sessionID: SessionID; startedAt: number; resolved: StackAgentRuntimeResolved }>
 }
 
 export type SessionInboxMove = {
@@ -2808,6 +2925,7 @@ export type ImprovementState = {
   implementation?: ImprovementImplementation
   evaluation?: ImprovementEvaluation
   decision?: { decision: ImprovementDecision; at: number; note?: string }
+  application?: ImprovementApplication
   error?: string
 }
 
@@ -2828,6 +2946,8 @@ export type ImprovementDefinition = {
   projectID: ProjectID
   baseRevision: string
   finding: ImprovementFinding
+  target?: ImprovementTarget
+  source?: { directory: AbsolutePath; projectID: ProjectID; branch: string; revision: string }
 }
 
 export type ComparisonRun = {
@@ -4783,6 +4903,7 @@ export type ComparisonCreateInput = {
   readonly id?: string | undefined
   readonly revision?: string | undefined
   readonly origin?: { readonly improvementID: string; readonly variant: "baseline" | "candidate" } | undefined
+  readonly stackAgentGeneration?: string | undefined
   readonly directory: string
   readonly task: {
     readonly title: string
@@ -4818,7 +4939,11 @@ export type ImprovementAnalysisOutput = ImprovementAnalysis
 
 export type ImprovementListOutput = Array<ImprovementSummary>
 
-export type ImprovementCreateInput = { readonly directory: string; readonly findingID: string }
+export type ImprovementCreateInput = {
+  readonly directory: string
+  readonly findingID: string
+  readonly target?: ("project" | "stack-agent") | undefined
+}
 
 export type ImprovementCreateOutput = ImprovementInfo
 
@@ -4845,6 +4970,54 @@ export type ImprovementDecideInput = {
 }
 
 export type ImprovementDecideOutput = ImprovementInfo
+
+export type ImprovementPreviewInput = { readonly improvementID: string }
+
+export type ImprovementPreviewOutput = ImprovementApplyPreview
+
+export type ImprovementApplyInput = { readonly improvementID: string }
+
+export type ImprovementApplyOutput = ImprovementInfo
+
+export type ImprovementStageInput = { readonly improvementID: string }
+
+export type ImprovementStageOutput = ImprovementInfo
+
+export type ImprovementPublishInput = { readonly improvementID: string }
+
+export type ImprovementPublishOutput = ImprovementInfo
+
+export type StackAgentStatusOutput = StackAgentRuntimeStatus
+
+export type StackAgentConfigureInput = {
+  readonly sourceDirectory?: string | undefined
+  readonly branch?: string | undefined
+  readonly buildCommand?: ReadonlyArray<string> | undefined
+  readonly artifact?: string | undefined
+  readonly smoke?: ReadonlyArray<ReadonlyArray<string>> | undefined
+  readonly checks?: ReadonlyArray<ReadonlyArray<string>> | undefined
+  readonly remote?: string | undefined
+}
+
+export type StackAgentConfigureOutput = StackAgentRuntimeSettings
+
+export type StackAgentCheckInput = { readonly fetch?: boolean | undefined }
+
+export type StackAgentCheckOutput = StackAgentRuntimeStatus
+
+export type StackAgentBuildInput = { readonly revision?: string | undefined }
+
+export type StackAgentBuildOutput = StackAgentRuntimeGeneration
+
+export type StackAgentActivateInput = { readonly generation: string }
+
+export type StackAgentActivateOutput = StackAgentRuntimeStatus
+
+export type StackAgentRollbackOutput = StackAgentRuntimeStatus
+
+export type StackAgentUsageInput = { readonly sessionID: string }
+
+export type StackAgentUsageOutput = StackAgentRuntimeUsage | null
 
 export type VcsInitInput = {
   readonly location?: { readonly directory?: string | undefined } | undefined

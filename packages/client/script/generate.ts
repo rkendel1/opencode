@@ -5,6 +5,7 @@ import { Agent } from "@opencode/schema/agent"
 import { Command } from "@opencode/schema/command"
 import { Comparison } from "@opencode/schema/comparison"
 import { Improvement } from "@opencode/schema/improvement"
+import { StackAgentRuntime } from "@opencode/schema/stack-agent-runtime"
 import { Config } from "@opencode/schema/config"
 import { Credential } from "@opencode/schema/credential"
 import { Event } from "@opencode/schema/event"
@@ -74,6 +75,7 @@ const effectTypeReferences = [
   ...namespaceTypes("Worktree", "@opencode/schema/worktree", Worktree),
   ...namespaceTypes("Comparison", "@opencode/schema/comparison", Comparison),
   ...namespaceTypes("Improvement", "@opencode/schema/improvement", Improvement),
+  ...namespaceTypes("StackAgentRuntime", "@opencode/schema/stack-agent-runtime", StackAgentRuntime),
   ...namespaceTypes("PromptInput", "@opencode/schema/prompt-input", PromptInput),
   ...namespaceTypes("Provider", "@opencode/schema/provider", Provider),
   ...namespaceTypes("Pty", "@opencode/schema/pty", Pty),

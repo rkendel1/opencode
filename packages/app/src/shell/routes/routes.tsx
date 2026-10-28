@@ -23,6 +23,10 @@ const CompareScreen = lazy(() => import("@/compare/screen").then((module) => ({ 
 
 const ImproveScreen = lazy(() => import("@/improve/screen").then((module) => ({ default: module.ImproveScreen })))
 
+const RuntimeScreen = lazy(() =>
+  import("@/stack-agent/screen").then((module) => ({ default: module.StackAgentRuntimeScreen })),
+)
+
 const ConnectServerScreen = lazy(() =>
   import("@/servers/connect/screen").then((module) => ({ default: module.ConnectServerScreen })),
 )
@@ -96,6 +100,20 @@ export function AppRoutes() {
               <TargetServerRoute>
                 <SessionPanelFrame raised>
                   <ImproveScreen />
+                </SessionPanelFrame>
+              </TargetServerRoute>
+            </Suspense>
+          </SessionRouteFrame>
+        )}
+      />
+      <Route
+        path="/server/:serverKey/stack-agent"
+        component={() => (
+          <SessionRouteFrame padded>
+            <Suspense fallback={<SessionPanelFrame raised />}>
+              <TargetServerRoute>
+                <SessionPanelFrame raised>
+                  <RuntimeScreen />
                 </SessionPanelFrame>
               </TargetServerRoute>
             </Suspense>

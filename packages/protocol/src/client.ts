@@ -66,6 +66,7 @@ export const groupNames = {
   "server.worktree": "worktree",
   "server.comparison": "comparison",
   "server.improvement": "improvement",
+  "server.stackAgentRuntime": "stackAgent",
   "server.vcs": "vcs",
   "server.config": "config",
 } as const

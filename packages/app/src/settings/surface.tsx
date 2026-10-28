@@ -62,7 +62,13 @@ export const { use: useSettingsSurface, provider: SettingsSurfaceProvider } = cr
     const sourceServer = createMemo(() => {
       const route = source()
 
-      if (route.type === "session" || route.type === "compare" || route.type === "improve") return route.server
+      if (
+        route.type === "session" ||
+        route.type === "compare" ||
+        route.type === "improve" ||
+        route.type === "stack-agent"
+      )
+        return route.server
 
       if (route.type === "draft")
         return tabs.store.find((item) => item.type === "draft" && item.draftID === route.draftID)?.server

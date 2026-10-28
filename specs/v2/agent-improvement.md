@@ -125,9 +125,10 @@ serialized per repository.
 
 ## Known limits
 
-- Interventions are evaluated in-process. That works for prompt and context changes (`AGENTS.md`, skills, project
-  config), which each Session loads from its own worktree. A change to opencode's or Stack-Agent's own code needs a
-  rebuilt runtime, so the pipeline cannot measure it and it will not show an improvement.
+- Project-target interventions are evaluated in-process. That works for prompt and context changes (`AGENTS.md`,
+  skills, project config), which each Session loads from its own worktree. Stack-Agent-target interventions are built
+  into a candidate runtime generation and measured against the baseline generation; see
+  `specs/v2/stack-agent-runtime.md`. Changes to opencode's own code are not measurable here.
 - Plain Sessions have no acceptance criteria, so only comparison runs enter outcome analysis.
 - Small samples are usually inconclusive; three trials per arm is the smallest design where 0/3 → 3/3 can pass
   α = 0.1.

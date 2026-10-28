@@ -62,6 +62,7 @@ export type LayoutRoute =
   | { type: "session"; sessionId: string; server: ServerConnection.Key }
   | { type: "compare"; server: ServerConnection.Key; comparisonID?: string }
   | { type: "improve"; server: ServerConnection.Key; improvementID?: string }
+  | { type: "stack-agent"; server: ServerConnection.Key }
 
 export const currentRoute = (pathname: string, search: string): LayoutRoute => {
   const parts = pathname.split("/").filter(Boolean)
@@ -92,6 +93,9 @@ export const currentRoute = (pathname: string, search: string): LayoutRoute => {
 
   if (parts[0] === "server" && parts[2] === "compare")
     return { type: "compare", server: requireServerKey(parts[1]), comparisonID: parts[3] }
+
+  if (parts[0] === "server" && parts[2] === "stack-agent")
+    return { type: "stack-agent", server: requireServerKey(parts[1]) }
 
   if (parts[0] === "server" && parts[2] === "improve")
     return { type: "improve", server: requireServerKey(parts[1]), improvementID: parts[3] }

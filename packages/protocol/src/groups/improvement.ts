@@ -86,6 +86,49 @@ export const ImprovementGroup = HttpApiGroup.make("server.improvement")
       error: [ImprovementNotFoundError, InvalidRequestError],
     }).annotateMerge(OpenApi.annotations({ identifier: "improvement.decide", summary: "Record a review decision" })),
   )
+  .add(
+    HttpApiEndpoint.get("improvement.preview", `${root}/:improvementID/apply`, {
+      params,
+      success: Improvement.ApplyPreview,
+      error: [ImprovementNotFoundError, InvalidRequestError],
+    }).annotateMerge(
+      OpenApi.annotations({
+        identifier: "improvement.preview",
+        summary: "Preview applying to Stack-Agent",
+        description: "The target branch tip, drift since evaluation and conflicts, computed without changing anything.",
+      }),
+    ),
+  )
+  .add(
+    HttpApiEndpoint.post("improvement.apply", `${root}/:improvementID/apply`, {
+      params,
+      success: Improvement.Info,
+      error: [ImprovementNotFoundError, InvalidRequestError],
+    }).annotateMerge(
+      OpenApi.annotations({
+        identifier: "improvement.apply",
+        summary: "Apply to Stack-Agent",
+        description:
+          "Apply the evaluated change on the target branch's tip as a new branch in an isolated worktree, run the checks, and stop on conflicts. Never modifies the target branch.",
+      }),
+    ),
+  )
+  .add(
+    HttpApiEndpoint.post("improvement.stage", `${root}/:improvementID/stage`, {
+      params,
+      success: Improvement.Info,
+      error: [ImprovementNotFoundError, InvalidRequestError],
+    }).annotateMerge(
+      OpenApi.annotations({ identifier: "improvement.stage", summary: "Build and stage the applied change" }),
+    ),
+  )
+  .add(
+    HttpApiEndpoint.post("improvement.publish", `${root}/:improvementID/publish`, {
+      params,
+      success: Improvement.Info,
+      error: [ImprovementNotFoundError, InvalidRequestError],
+    }).annotateMerge(OpenApi.annotations({ identifier: "improvement.publish", summary: "Push the applied branch" })),
+  )
   .annotateMerge(
     OpenApi.annotations({ title: "improvement", description: "Evidence-driven agent improvement routes." }),
   )

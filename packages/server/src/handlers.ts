@@ -30,6 +30,7 @@ import { ProjectHandler } from "./handlers/project"
 import { WorktreeHandler } from "./handlers/worktree"
 import { ComparisonHandler } from "./handlers/comparison"
 import { ImprovementHandler } from "./handlers/improvement"
+import { StackAgentRuntimeHandler } from "./handlers/stack-agent-runtime"
 import { VcsHandler } from "./handlers/vcs"
 import { EventFeed } from "./event-feed"
 import { MigrationHandler } from "./handlers/migration"
@@ -68,6 +69,7 @@ export const handlers = Layer.mergeAll(
   WorktreeHandler,
   ComparisonHandler,
   ImprovementHandler,
+  StackAgentRuntimeHandler,
   VcsHandler,
   ConfigHandler,
 )

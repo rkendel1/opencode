@@ -40,6 +40,7 @@ import type { Pty } from "@opencode/schema/pty"
 import type { Reference } from "@opencode/schema/reference"
 import type { Worktree } from "@opencode/schema/worktree"
 import type { Comparison } from "@opencode/schema/comparison"
+import type { Improvement } from "@opencode/schema/improvement"
 import type { Vcs } from "@opencode/schema/vcs"
 import type { WebSearch } from "@opencode/schema/websearch"
 import type { UsageLimits } from "@opencode/schema/usage-limits"
@@ -2373,6 +2374,9 @@ export type ComparisonListOutput = ReadonlyArray<Comparison.Summary>
 export type ComparisonListOperation<E = never> = () => Effect.Effect<ComparisonListOutput, E>
 
 export type ComparisonCreateInput = {
+  readonly id?: Comparison.ID | undefined
+  readonly revision?: string | undefined
+  readonly origin?: Comparison.Origin | undefined
   readonly directory: AbsolutePath
   readonly task: Comparison.Task
   readonly model?: Model.Ref | undefined
@@ -2409,6 +2413,61 @@ export interface ComparisonApi<E = never> {
   readonly get: ComparisonGetOperation<E>
   readonly cancel: ComparisonCancelOperation<E>
   readonly rerun: ComparisonRerunOperation<E>
+}
+
+export type ImprovementAnalysisInput = { readonly directory: AbsolutePath }
+export type ImprovementAnalysisOutput = Improvement.Analysis
+export type ImprovementAnalysisOperation<E = never> = (
+  input: ImprovementAnalysisInput,
+) => Effect.Effect<ImprovementAnalysisOutput, E>
+
+export type ImprovementListOutput = ReadonlyArray<Improvement.Summary>
+export type ImprovementListOperation<E = never> = () => Effect.Effect<ImprovementListOutput, E>
+
+export type ImprovementCreateInput = { readonly directory: AbsolutePath; readonly findingID: string }
+export type ImprovementCreateOutput = Improvement.Info
+export type ImprovementCreateOperation<E = never> = (
+  input: ImprovementCreateInput,
+) => Effect.Effect<ImprovementCreateOutput, E>
+
+export type ImprovementGetInput = { readonly improvementID: Improvement.ID }
+export type ImprovementGetOutput = Improvement.Info
+export type ImprovementGetOperation<E = never> = (input: ImprovementGetInput) => Effect.Effect<ImprovementGetOutput, E>
+
+export type ImprovementInvestigateInput = { readonly improvementID: Improvement.ID }
+export type ImprovementInvestigateOutput = Improvement.Info
+export type ImprovementInvestigateOperation<E = never> = (
+  input: ImprovementInvestigateInput,
+) => Effect.Effect<ImprovementInvestigateOutput, E>
+
+export type ImprovementApproveInput = {
+  readonly improvementID: Improvement.ID
+  readonly attempt: number
+  readonly harness: Comparison.Harness
+}
+export type ImprovementApproveOutput = Improvement.Info
+export type ImprovementApproveOperation<E = never> = (
+  input: ImprovementApproveInput,
+) => Effect.Effect<ImprovementApproveOutput, E>
+
+export type ImprovementDecideInput = {
+  readonly improvementID: Improvement.ID
+  readonly decision: Improvement.Decision
+  readonly note?: string | undefined
+}
+export type ImprovementDecideOutput = Improvement.Info
+export type ImprovementDecideOperation<E = never> = (
+  input: ImprovementDecideInput,
+) => Effect.Effect<ImprovementDecideOutput, E>
+
+export interface ImprovementApi<E = never> {
+  readonly analysis: ImprovementAnalysisOperation<E>
+  readonly list: ImprovementListOperation<E>
+  readonly create: ImprovementCreateOperation<E>
+  readonly get: ImprovementGetOperation<E>
+  readonly investigate: ImprovementInvestigateOperation<E>
+  readonly approve: ImprovementApproveOperation<E>
+  readonly decide: ImprovementDecideOperation<E>
 }
 
 export type VcsInitInput = {
@@ -2581,6 +2640,7 @@ export interface AppApi<E = never> {
   readonly reference: ReferenceApi<E>
   readonly worktree: WorktreeApi<E>
   readonly comparison: ComparisonApi<E>
+  readonly improvement: ImprovementApi<E>
   readonly vcs: VcsApi<E>
   readonly debug: DebugApi<E>
   readonly migration: MigrationApi<E>

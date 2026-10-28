@@ -208,6 +208,9 @@ const layer = Layer.effect(
     const fs = yield* FSUtil.Service
     const proc = yield* AppProcess.Service
     const locks = KeyedMutex.makeUnsafe<string>()
+    // Concurrent `git worktree add` calls race on the shared administrative directory and fail with
+    // "failed to read .git/worktrees/<name>/commondir", so worktree changes run one at a time per repository.
+    const worktreeLocks = KeyedMutex.makeUnsafe<string>()
     const locked = <A, E, R>(repository: Repository, effect: Effect.Effect<A, E, R>) =>
       locks.withLock(repository.gitDirectory)(effect)
 
@@ -1409,11 +1412,13 @@ const layer = Layer.effect(
       directory: AbsolutePath
       ref?: string
     }) {
-      yield* worktreeRun(
-        "create",
-        input.repository,
-        ["worktree", "add", "--detach", "--", input.directory, input.ref ?? "HEAD"],
-        input.directory,
+      yield* worktreeLocks.withLock(input.repository.commonDirectory)(
+        worktreeRun(
+          "create",
+          input.repository,
+          ["worktree", "add", "--detach", "--", input.directory, input.ref ?? "HEAD"],
+          input.directory,
+        ),
       )
       const repository = yield* discover(input.directory)
       if (repository) return repository
@@ -1429,12 +1434,14 @@ const layer = Layer.effect(
       directory: AbsolutePath
       force: boolean
     }) {
-      yield* worktreeRun(
-        "remove",
-        input.repository,
-        ["worktree", "remove", ...(input.force ? ["--force"] : []), input.directory],
-        input.directory,
-        input.repository.commonDirectory,
+      yield* worktreeLocks.withLock(input.repository.commonDirectory)(
+        worktreeRun(
+          "remove",
+          input.repository,
+          ["worktree", "remove", ...(input.force ? ["--force"] : []), input.directory],
+          input.directory,
+          input.repository.commonDirectory,
+        ),
       )
     })
 

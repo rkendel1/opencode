@@ -272,6 +272,19 @@ import type {
   ComparisonCancelOutput,
   ComparisonRerunInput,
   ComparisonRerunOutput,
+  ImprovementAnalysisInput,
+  ImprovementAnalysisOutput,
+  ImprovementListOutput,
+  ImprovementCreateInput,
+  ImprovementCreateOutput,
+  ImprovementGetInput,
+  ImprovementGetOutput,
+  ImprovementInvestigateInput,
+  ImprovementInvestigateOutput,
+  ImprovementApproveInput,
+  ImprovementApproveOutput,
+  ImprovementDecideInput,
+  ImprovementDecideOutput,
   VcsInitInput,
   VcsInitOutput,
   VcsGetInput,
@@ -2257,6 +2270,9 @@ export function make(options: ClientOptions) {
             method: "POST",
             path: `/api/comparison`,
             body: {
+              id: input["id"],
+              revision: input["revision"],
+              origin: input["origin"],
               directory: input["directory"],
               task: input["task"],
               model: input["model"],
@@ -2297,6 +2313,83 @@ export function make(options: ClientOptions) {
           {
             method: "POST",
             path: `/api/comparison/${encodeURIComponent(input.comparisonID)}/rerun`,
+            successStatus: 200,
+            declaredStatuses: [400, 401, 404],
+            empty: false,
+          },
+          requestOptions,
+        ),
+    },
+    improvement: {
+      analysis: (input: ImprovementAnalysisInput, requestOptions?: RequestOptions) =>
+        request<ImprovementAnalysisOutput>(
+          {
+            method: "GET",
+            path: `/api/improvement/analysis`,
+            query: { directory: input["directory"] },
+            successStatus: 200,
+            declaredStatuses: [400, 401],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      list: (requestOptions?: RequestOptions) =>
+        request<ImprovementListOutput>(
+          { method: "GET", path: `/api/improvement`, successStatus: 200, declaredStatuses: [400, 401], empty: false },
+          requestOptions,
+        ),
+      create: (input: ImprovementCreateInput, requestOptions?: RequestOptions) =>
+        request<ImprovementCreateOutput>(
+          {
+            method: "POST",
+            path: `/api/improvement`,
+            body: { directory: input["directory"], findingID: input["findingID"] },
+            successStatus: 200,
+            declaredStatuses: [400, 401],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      get: (input: ImprovementGetInput, requestOptions?: RequestOptions) =>
+        request<ImprovementGetOutput>(
+          {
+            method: "GET",
+            path: `/api/improvement/${encodeURIComponent(input.improvementID)}`,
+            successStatus: 200,
+            declaredStatuses: [400, 401, 404],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      investigate: (input: ImprovementInvestigateInput, requestOptions?: RequestOptions) =>
+        request<ImprovementInvestigateOutput>(
+          {
+            method: "POST",
+            path: `/api/improvement/${encodeURIComponent(input.improvementID)}/investigate`,
+            successStatus: 200,
+            declaredStatuses: [400, 401, 404],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      approve: (input: ImprovementApproveInput, requestOptions?: RequestOptions) =>
+        request<ImprovementApproveOutput>(
+          {
+            method: "POST",
+            path: `/api/improvement/${encodeURIComponent(input.improvementID)}/approve`,
+            body: { attempt: input["attempt"], harness: input["harness"] },
+            successStatus: 200,
+            declaredStatuses: [400, 401, 404],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      decide: (input: ImprovementDecideInput, requestOptions?: RequestOptions) =>
+        request<ImprovementDecideOutput>(
+          {
+            method: "POST",
+            path: `/api/improvement/${encodeURIComponent(input.improvementID)}/decide`,
+            body: { decision: input["decision"], note: input["note"] },
             successStatus: 200,
             declaredStatuses: [400, 401, 404],
             empty: false,

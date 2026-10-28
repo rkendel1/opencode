@@ -335,8 +335,12 @@ function mountLodger(
     if (!l.width) return
     const s = parts.box.closest('[data-component="new-session"]')?.getBoundingClientRect()
     const pitch = Math.max(3, Math.round(l.width / 78))
-    const x = s ? Math.round(l.left - s.left + (l.width - pitch * 78) / 2) - (l.left - s.left) : (l.width - pitch * 78) / 2
-    const y = s ? Math.round(l.top - s.top + (l.height - pitch * 14) / 2) - (l.top - s.top) : (l.height - pitch * 14) / 2
+    const x = s
+      ? Math.round(l.left - s.left + (l.width - pitch * 78) / 2) - (l.left - s.left)
+      : (l.width - pitch * 78) / 2
+    const y = s
+      ? Math.round(l.top - s.top + (l.height - pitch * 14) / 2) - (l.top - s.top)
+      : (l.height - pitch * 14) / 2
     parts.stage.style.left = `${x}px`
     parts.stage.style.top = `${y}px`
     parts.stage.style.width = `${pitch * 78}px`

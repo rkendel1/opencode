@@ -364,8 +364,12 @@ function mountPinBoard(
     const cy = view.y0 + (ROWS * view.pitch) / 2
     // In game mode the board leans only slightly after the ball, so the bricks stay readable.
     const lean = view.game ? 0.12 : 0.6
-    const tx = pointer.inside ? lerp(REST_TILT[0], clamp(((cx - pointer.x) / (view.w * 0.5)) * 1.4), lean) : REST_TILT[0]
-    const ty = pointer.inside ? lerp(REST_TILT[1], clamp(((cy - pointer.y) / (view.h * 0.5)) * 1.4), lean) : REST_TILT[1]
+    const tx = pointer.inside
+      ? lerp(REST_TILT[0], clamp(((cx - pointer.x) / (view.w * 0.5)) * 1.4), lean)
+      : REST_TILT[0]
+    const ty = pointer.inside
+      ? lerp(REST_TILT[1], clamp(((cy - pointer.y) / (view.h * 0.5)) * 1.4), lean)
+      : REST_TILT[1]
     const ease = 1 - Math.exp(-dt * 4)
     tilt.x += (tx - tilt.x) * ease
     tilt.y += (ty - tilt.y) * ease
@@ -570,12 +574,28 @@ function mountPinBoard(
         for (const p of band) {
           if (p.lv !== lv) continue
           const fx = p.hx + ox * p.fd + sx * half
-          quads.quad(fx, p.hy + oy * p.fd - half, ox * (p.bd - p.fd), oy * (p.bd - p.fd), 0, size, colors.side[lv][sideX])
+          quads.quad(
+            fx,
+            p.hy + oy * p.fd - half,
+            ox * (p.bd - p.fd),
+            oy * (p.bd - p.fd),
+            0,
+            size,
+            colors.side[lv][sideX],
+          )
         }
         for (const p of band) {
           if (p.lv !== lv) continue
           const fy = p.hy + oy * p.fd + sy * half
-          quads.quad(p.hx + ox * p.fd - half, fy, size, 0, ox * (p.bd - p.fd), oy * (p.bd - p.fd), colors.side[lv][sideY])
+          quads.quad(
+            p.hx + ox * p.fd - half,
+            fy,
+            size,
+            0,
+            ox * (p.bd - p.fd),
+            oy * (p.bd - p.fd),
+            colors.side[lv][sideY],
+          )
         }
       }
       for (const p of band)

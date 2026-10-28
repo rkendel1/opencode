@@ -16,6 +16,8 @@ export function useNewSessionCommands(input: {
   }
   /** Opens the Compare Agents workspace for the draft's repository. */
   compare: () => void
+  /** Opens the Improvement Lab for the draft's repository. */
+  improve: () => void
 }) {
   const command = useCommand()
   const dialog = useDialog()
@@ -55,6 +57,13 @@ export function useNewSessionCommands(input: {
       description: language.t("compare.command.description"),
       category: language.t("command.category.workspace"),
       onSelect: input.compare,
+    },
+    {
+      id: "improve.open",
+      title: language.t("improve.command"),
+      description: language.t("improve.command.description"),
+      category: language.t("command.category.workspace"),
+      onSelect: input.improve,
     },
   ])
   // Shadows the titlebar's command of the same key while the draft is mounted, so it searches projects in place.

@@ -323,6 +323,8 @@ export type ReferenceGitSource = { type: "git"; repository: string; branch?: str
 
 export type ComparisonID = string
 
+export type ComparisonOrigin = { improvementID: string; variant: "baseline" | "candidate" }
+
 export type ComparisonHarness = "opencode" | "stack-agent"
 
 export type ComparisonRunStatus = "preparing" | "running" | "evaluating" | "completed" | "failed-to-start" | "cancelled"
@@ -366,6 +368,38 @@ export type ComparisonFileChange = {
   status: "modified" | "added" | "deleted" | "renamed" | "untracked"
   additions?: number
   deletions?: number
+}
+
+export type ImprovementFindingKind =
+  | "failure-association"
+  | "success-association"
+  | "runtime-gap"
+  | "recurring-task-failure"
+  | "efficiency-gap"
+
+export type ImprovementDisposition = "improved" | "regressed" | "inconclusive" | "failed-to-implement"
+
+export type ImprovementDecision = "accept" | "reject" | "inconclusive"
+
+export type ImprovementID = string
+
+export type ImprovementStage =
+  | "investigating"
+  | "proposed"
+  | "needs-proposal"
+  | "baseline"
+  | "implementing"
+  | "candidate"
+  | "evaluated"
+  | "decided"
+
+export type ImprovementCheck = {
+  id: string
+  description: string
+  command: string
+  passed: boolean
+  exitCode: number
+  output: string
 }
 
 export type VcsBranch = { current?: string; default?: string }
@@ -934,11 +968,66 @@ export type FormMultiselectField1 = {
 
 export type FormAnswer1 = { [x: string]: FormValue1 }
 
+export type ImprovementPlannedRun = {
+  variant: "baseline" | "candidate"
+  taskKey: string
+  trial: number
+  comparisonID: ComparisonID
+}
+
+export type ImprovementProposal = {
+  version: 1
+  findingID: string
+  title: string
+  cause: string
+  hypothesis: string
+  mechanism: string
+  layer:
+    | "runtime"
+    | "prompt-context"
+    | "tool-integration"
+    | "capability-discovery"
+    | "recovery"
+    | "model-configuration"
+    | "verification"
+    | "other"
+  alternatives: [string, ...Array<string>]
+  sourceLocations: [
+    { path: string; line?: number; reason: string },
+    ...Array<{ path: string; line?: number; reason: string }>,
+  ]
+  changes: [{ path: string; description: string }, ...Array<{ path: string; description: string }>]
+  acceptanceCriteria: [
+    { id: string; description: string; command: string },
+    ...Array<{ id: string; description: string; command: string }>,
+  ]
+  evaluation: {
+    taskKeys: [string, ...Array<string>]
+    trials: number
+    targetRuntimes: [ComparisonHarness, ...Array<ComparisonHarness>]
+  }
+  risks: Array<string>
+  rollback: [string, ...Array<string>]
+  requiredApprovals: Array<string>
+}
+
+export type ImprovementHarnessResult = {
+  harness: ComparisonHarness
+  target: boolean
+  baseline: { runs: number; verified: number; successes: number }
+  candidate: { runs: number; verified: number; successes: number }
+  pImproved?: number
+  pRegressed?: number
+  criterionRegressions: Array<string>
+  metrics: Array<{ key: string; label: string; baseline?: number; candidate?: number }>
+}
+
 export type ComparisonSummary = {
   id: ComparisonID
   title: string
   createdAt: number
   directory: AbsolutePath
+  origin?: ComparisonOrigin
   runs: Array<{ harness: ComparisonHarness; status: ComparisonRunStatus; outcome?: ComparisonOutcome }>
 }
 
@@ -946,6 +1035,17 @@ export type ComparisonTrial = {
   harness: ComparisonHarness
   runs: number
   outcomes: Array<{ outcome: ComparisonOutcome; count: number }>
+}
+
+export type ImprovementFindingEvidence = {
+  recordID: string
+  comparisonID: ComparisonID
+  harness: ComparisonHarness
+  sessionID?: SessionID
+  taskKey: string
+  title: string
+  outcome?: ComparisonOutcome
+  note: string
 }
 
 export type ComparisonTask = {
@@ -962,6 +1062,30 @@ export type ComparisonCriterionResult = {
   baseline?: "passed" | "failed" | "unverified" | "not-run"
   regression: boolean
   evidence: Array<ComparisonEvidence>
+}
+
+export type ImprovementSummary = {
+  id: ImprovementID
+  title: string
+  findingID: string
+  createdAt: number
+  stage: ImprovementStage
+  verdict?: ImprovementDisposition
+  decision?: ImprovementDecision
+}
+
+export type ImprovementImplementation = {
+  status: "preparing" | "running" | "verifying" | "completed" | "failed"
+  harness: ComparisonHarness
+  directory?: AbsolutePath
+  branch?: string
+  sessionID?: SessionID
+  commit?: string
+  patch?: string
+  patchTruncated: boolean
+  changes: Array<ComparisonFileChange>
+  checks: Array<ImprovementCheck>
+  error?: string
 }
 
 export type VcsInfo = { provider?: string; branch: VcsBranch }
@@ -2210,6 +2334,66 @@ export type FormReplied = {
   data: { id: FormID; sessionID: string; answer: FormAnswer1 }
 }
 
+export type ImprovementPlan = {
+  attempt: number
+  harness: ComparisonHarness
+  approvedAt: number
+  alpha: number
+  trials: number
+  taskKeys: Array<string>
+  targetRuntimes: Array<ComparisonHarness>
+  runs: Array<ImprovementPlannedRun>
+}
+
+export type ImprovementInvestigation = {
+  attempt: number
+  status: "running" | "valid" | "invalid" | "failed"
+  sessionID?: SessionID
+  startedAt: number
+  proposal?: ImprovementProposal
+  errors: Array<string>
+}
+
+export type ImprovementEvaluation = {
+  status: "baseline" | "candidate" | "completed"
+  results: Array<ImprovementHarnessResult>
+  verdict?: ImprovementDisposition
+  reason?: string
+}
+
+export type ImprovementFinding = {
+  id: string
+  kind: ImprovementFindingKind
+  title: string
+  statement: string
+  interpretation: string
+  scope: {
+    stage: string
+    feature?: string
+    harness?: ComparisonHarness
+    category?: ComparisonCategory
+    taskKey?: string
+  }
+  frequency: number
+  sampleSize: number
+  severity: "high" | "medium" | "low"
+  effect: { measure: string; estimate: number; low?: number; high?: number }
+  comparisonGroup: string
+  pValue?: number
+  adjustedPValue?: number
+  support: "supported" | "tentative"
+  needsMoreEvidence: boolean
+  evidence: Array<ImprovementFindingEvidence>
+  taskKeys: Array<string>
+  history: Array<{
+    improvementID: string
+    verdict?: ImprovementDisposition
+    decision?: ImprovementDecision
+    validated: boolean
+  }>
+  method: string
+}
+
 export type ComparisonDefinition = {
   id: ComparisonID
   createdAt: number
@@ -2220,6 +2404,7 @@ export type ComparisonDefinition = {
   stackAgentModel?: ModelRef
   harnesses: Array<ComparisonHarness>
   rerunOf?: ComparisonID
+  origin?: ComparisonOrigin
 }
 
 export type ComparisonReport = {
@@ -2616,6 +2801,35 @@ export type CredentialEntry = {
 
 export type FormFields2 = [FormField1, ...Array<FormField1>]
 
+export type ImprovementState = {
+  stage: ImprovementStage
+  investigations: Array<ImprovementInvestigation>
+  plan?: ImprovementPlan
+  implementation?: ImprovementImplementation
+  evaluation?: ImprovementEvaluation
+  decision?: { decision: ImprovementDecision; at: number; note?: string }
+  error?: string
+}
+
+export type ImprovementAnalysis = {
+  version: 1
+  generatedAt: number
+  records: number
+  verified: number
+  findings: Array<ImprovementFinding>
+  insufficient: Array<{ analysis: string; have: number; need: number; reason: string }>
+  method: string
+}
+
+export type ImprovementDefinition = {
+  id: ImprovementID
+  createdAt: number
+  directory: AbsolutePath
+  projectID: ProjectID
+  baseRevision: string
+  finding: ImprovementFinding
+}
+
 export type ComparisonRun = {
   harness: ComparisonHarness
   status: ComparisonRunStatus
@@ -2704,6 +2918,8 @@ export type IntegrationExternalMethod = { id: IntegrationMethodID; type: "extern
 export type GenerateDecisionsResponse = { data: GenerateDecisionResult }
 
 export type FormInfo1 = { id: FormID; sessionID: string; title: string; metadata?: FormMetadata1; fields: FormFields2 }
+
+export type ImprovementInfo = { definition: ImprovementDefinition; state: ImprovementState }
 
 export type ComparisonInfo = {
   definition: ComparisonDefinition
@@ -3206,6 +3422,14 @@ export type ComparisonNotFoundError = {
 }
 export const isComparisonNotFoundError = (value: unknown): value is ComparisonNotFoundError =>
   typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "ComparisonNotFoundError"
+
+export type ImprovementNotFoundError = {
+  readonly _tag: "ImprovementNotFoundError"
+  readonly improvementID: string
+  readonly message: string
+}
+export const isImprovementNotFoundError = (value: unknown): value is ImprovementNotFoundError =>
+  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "ImprovementNotFoundError"
 
 export type VcsInitNotSupportedError = {
   readonly _tag: "VcsInitNotSupportedError"
@@ -4556,6 +4780,9 @@ export type WorktreeRefreshOutput = void
 export type ComparisonListOutput = Array<ComparisonSummary>
 
 export type ComparisonCreateInput = {
+  readonly id?: string | undefined
+  readonly revision?: string | undefined
+  readonly origin?: { readonly improvementID: string; readonly variant: "baseline" | "candidate" } | undefined
   readonly directory: string
   readonly task: {
     readonly title: string
@@ -4584,6 +4811,40 @@ export type ComparisonCancelOutput = ComparisonInfo
 export type ComparisonRerunInput = { readonly comparisonID: string }
 
 export type ComparisonRerunOutput = ComparisonInfo
+
+export type ImprovementAnalysisInput = { readonly directory: string }
+
+export type ImprovementAnalysisOutput = ImprovementAnalysis
+
+export type ImprovementListOutput = Array<ImprovementSummary>
+
+export type ImprovementCreateInput = { readonly directory: string; readonly findingID: string }
+
+export type ImprovementCreateOutput = ImprovementInfo
+
+export type ImprovementGetInput = { readonly improvementID: string }
+
+export type ImprovementGetOutput = ImprovementInfo
+
+export type ImprovementInvestigateInput = { readonly improvementID: string }
+
+export type ImprovementInvestigateOutput = ImprovementInfo
+
+export type ImprovementApproveInput = {
+  readonly improvementID: string
+  readonly attempt: number
+  readonly harness: "opencode" | "stack-agent"
+}
+
+export type ImprovementApproveOutput = ImprovementInfo
+
+export type ImprovementDecideInput = {
+  readonly improvementID: string
+  readonly decision: "accept" | "reject" | "inconclusive"
+  readonly note?: string | undefined
+}
+
+export type ImprovementDecideOutput = ImprovementInfo
 
 export type VcsInitInput = {
   readonly location?: { readonly directory?: string | undefined } | undefined

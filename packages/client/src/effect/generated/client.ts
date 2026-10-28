@@ -272,6 +272,19 @@ import type {
   ComparisonCancelOutput,
   ComparisonRerunInput,
   ComparisonRerunOutput,
+  ImprovementAnalysisInput,
+  ImprovementAnalysisOutput,
+  ImprovementListOutput,
+  ImprovementCreateInput,
+  ImprovementCreateOutput,
+  ImprovementGetInput,
+  ImprovementGetOutput,
+  ImprovementInvestigateInput,
+  ImprovementInvestigateOutput,
+  ImprovementApproveInput,
+  ImprovementApproveOutput,
+  ImprovementDecideInput,
+  ImprovementDecideOutput,
   VcsInitInput,
   VcsInitOutput,
   VcsGetInput,
@@ -1659,6 +1672,9 @@ const EndpointComparisonCreate = (raw: RawClient["server.comparison"]) => (input
   preserveEffect<ComparisonCreateOutput>()(
     raw["comparison.create"]({
       payload: {
+        id: input["id"],
+        revision: input["revision"],
+        origin: input["origin"],
         directory: input["directory"],
         task: input["task"],
         model: input["model"],
@@ -1692,6 +1708,59 @@ const adaptGroupComparison = (raw: RawClient["server.comparison"]) => ({
   get: EndpointComparisonGet(raw),
   cancel: EndpointComparisonCancel(raw),
   rerun: EndpointComparisonRerun(raw),
+})
+
+const EndpointImprovementAnalysis = (raw: RawClient["server.improvement"]) => (input: ImprovementAnalysisInput) =>
+  preserveEffect<ImprovementAnalysisOutput>()(
+    raw["improvement.analysis"]({ query: { directory: input["directory"] } }).pipe(Effect.mapError(mapClientError)),
+  )
+
+const EndpointImprovementList = (raw: RawClient["server.improvement"]) => () =>
+  preserveEffect<ImprovementListOutput>()(raw["improvement.list"]({}).pipe(Effect.mapError(mapClientError)))
+
+const EndpointImprovementCreate = (raw: RawClient["server.improvement"]) => (input: ImprovementCreateInput) =>
+  preserveEffect<ImprovementCreateOutput>()(
+    raw["improvement.create"]({ payload: { directory: input["directory"], findingID: input["findingID"] } }).pipe(
+      Effect.mapError(mapClientError),
+    ),
+  )
+
+const EndpointImprovementGet = (raw: RawClient["server.improvement"]) => (input: ImprovementGetInput) =>
+  preserveEffect<ImprovementGetOutput>()(
+    raw["improvement.get"]({ params: { improvementID: input["improvementID"] } }).pipe(Effect.mapError(mapClientError)),
+  )
+
+const EndpointImprovementInvestigate = (raw: RawClient["server.improvement"]) => (input: ImprovementInvestigateInput) =>
+  preserveEffect<ImprovementInvestigateOutput>()(
+    raw["improvement.investigate"]({ params: { improvementID: input["improvementID"] } }).pipe(
+      Effect.mapError(mapClientError),
+    ),
+  )
+
+const EndpointImprovementApprove = (raw: RawClient["server.improvement"]) => (input: ImprovementApproveInput) =>
+  preserveEffect<ImprovementApproveOutput>()(
+    raw["improvement.approve"]({
+      params: { improvementID: input["improvementID"] },
+      payload: { attempt: input["attempt"], harness: input["harness"] },
+    }).pipe(Effect.mapError(mapClientError)),
+  )
+
+const EndpointImprovementDecide = (raw: RawClient["server.improvement"]) => (input: ImprovementDecideInput) =>
+  preserveEffect<ImprovementDecideOutput>()(
+    raw["improvement.decide"]({
+      params: { improvementID: input["improvementID"] },
+      payload: { decision: input["decision"], note: input["note"] },
+    }).pipe(Effect.mapError(mapClientError)),
+  )
+
+const adaptGroupImprovement = (raw: RawClient["server.improvement"]) => ({
+  analysis: EndpointImprovementAnalysis(raw),
+  list: EndpointImprovementList(raw),
+  create: EndpointImprovementCreate(raw),
+  get: EndpointImprovementGet(raw),
+  investigate: EndpointImprovementInvestigate(raw),
+  approve: EndpointImprovementApprove(raw),
+  decide: EndpointImprovementDecide(raw),
 })
 
 const EndpointVcsInit = (raw: RawClient["server.vcs"]) => (input?: VcsInitInput) =>
@@ -1840,6 +1909,7 @@ const adaptClient = (raw: RawClient) => ({
   reference: adaptGroupReference(raw["server.reference"]),
   worktree: adaptGroupWorktree(raw["server.worktree"]),
   comparison: adaptGroupComparison(raw["server.comparison"]),
+  improvement: adaptGroupImprovement(raw["server.improvement"]),
   vcs: adaptGroupVcs(raw["server.vcs"]),
   debug: adaptGroupDebug(raw["server.debug"]),
   migration: adaptGroupMigration(raw["server.migration"]),

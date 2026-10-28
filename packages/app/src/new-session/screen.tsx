@@ -5,7 +5,7 @@ import { useLayout } from "@/shell/state/layout"
 import { A, useNavigate, useSearchParams } from "@solidjs/router"
 import { createEffect, createMemo, createResource, on, Show, untrack } from "solid-js"
 import { useLanguage } from "@/runtime/i18n/language"
-import { compareHref } from "@/shell/routes/session"
+import { compareHref, improveHref } from "@/shell/routes/session"
 import { createComposerModel } from "@/composer/model"
 import { useComposerCommands } from "@/composer/commands"
 import { createNewSessionComposerAdapter } from "./composer-adapter"
@@ -70,6 +70,11 @@ export default function NewSessionPage(props: { draftId: string }) {
 
       if (draft) navigate(compareHref(draft.server, { directory: draft.directory }))
     },
+    improve: () => {
+      const draft = draftTab()
+
+      if (draft) navigate(improveHref(draft.server, { directory: draft.directory }))
+    },
   })
   // Focus once the draft loads. restoreFocus reads the stored cursor, so tracking it here would reapply
   // a stale cursor a frame after every key-up and yank the caret from a key pressed in that frame.
@@ -109,13 +114,22 @@ export default function NewSessionPage(props: { draftId: string }) {
       <ModePill cli={sessionHarness.cli()} onCli={sessionHarness.setCli} />
       <Show when={draftTab()}>
         {(draft) => (
-          <A
-            data-action="compare-agents"
-            href={compareHref(draft().server, { directory: draft().directory })}
-            class="absolute start-3 bottom-3 z-30 rounded-lg border border-v2-border-border-base bg-v2-background-bg-base px-2 py-1 text-12-medium text-v2-text-text-muted hover:text-v2-text-text-base"
-          >
-            {language.t("compare.command")}
-          </A>
+          <div class="absolute start-3 bottom-3 z-30 flex gap-1">
+            <A
+              data-action="compare-agents"
+              href={compareHref(draft().server, { directory: draft().directory })}
+              class="rounded-lg border border-v2-border-border-base bg-v2-background-bg-base px-2 py-1 text-12-medium text-v2-text-text-muted hover:text-v2-text-text-base"
+            >
+              {language.t("compare.command")}
+            </A>
+            <A
+              data-action="improvement-lab"
+              href={improveHref(draft().server, { directory: draft().directory })}
+              class="rounded-lg border border-v2-border-border-base bg-v2-background-bg-base px-2 py-1 text-12-medium text-v2-text-text-muted hover:text-v2-text-text-base"
+            >
+              {language.t("improve.command")}
+            </A>
+          </div>
         )}
       </Show>
     </div>

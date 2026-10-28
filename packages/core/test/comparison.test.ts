@@ -280,6 +280,37 @@ describe("Comparison", () => {
     }),
   )
 
+  it.live("adopts a reused comparison ID and starts from an explicit revision", () =>
+    Effect.gen(function* () {
+      const repo = yield* fixture
+      yield* scriptNative("42\n")
+      const first = (yield* Effect.promise(() => $`git rev-parse HEAD`.cwd(repo.repo).text())).trim()
+      yield* Effect.promise(async () => {
+        await Bun.write(path.join(repo.repo, "later.txt"), "later\n")
+        await $`git add later.txt && git commit -m later`.cwd(repo.repo).quiet()
+      })
+      const comparisons = yield* Comparison.Service
+      const id = Comparison.ID.make("cmp_fixed_id")
+      const origin = { improvementID: "imp_test", variant: "baseline" as const }
+      const created = yield* comparisons.create({ id, revision: first, origin, directory: repo.repo, task: TASK })
+      const again = yield* comparisons.create({ id, directory: repo.repo, task: { ...TASK, prompt: "different" } })
+      expect(again.definition).toEqual(created.definition)
+      expect(created.definition.repository.revision).toBe(first)
+      expect(created.definition.origin).toEqual(origin)
+      expect((yield* comparisons.list()).filter((item) => item.id === id)).toHaveLength(1)
+      const info = yield* settled(id)
+      const head = yield* Effect.promise(() => $`git rev-parse HEAD`.cwd(run(info, "opencode").directory!).text())
+      expect(head.trim()).toBe(first)
+      expect(
+        yield* Effect.promise(() => Bun.file(path.join(run(info, "opencode").directory!, "later.txt")).exists()),
+      ).toBe(false)
+      const invalid = yield* comparisons
+        .create({ revision: "0000000000000000000000000000000000000000", directory: repo.repo, task: TASK })
+        .pipe(Effect.flip)
+      expect(invalid._tag).toBe("Comparison.InvalidInputError")
+    }),
+  )
+
   it.live("rejects a directory that is not a Git repository", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()

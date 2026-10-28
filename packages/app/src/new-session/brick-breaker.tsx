@@ -29,7 +29,13 @@ export function NewSessionBrickBreaker(props: {
 
   onMount(() =>
     onCleanup(
-      mountGame({ panel: props.panel, paddle, hud, score, spares, walls }, props.board, props.ball, props.sound, props.onDone),
+      mountGame(
+        { panel: props.panel, paddle, hud, score, spares, walls },
+        props.board,
+        props.ball,
+        props.sound,
+        props.onDone,
+      ),
     ),
   )
 
@@ -243,12 +249,7 @@ function mountGame(
         bump(Math.PI / 2, 0.22)
         if (sound()) PinSound.bounce(b.x, view.w, 4000)
       }
-      if (
-        b.vy > 0 &&
-        b.y + r >= pad.y &&
-        b.y - r < pad.y + pad.h &&
-        Math.abs(b.x - pad.x) <= pad.w / 2 + r * 0.6
-      ) {
+      if (b.vy > 0 && b.y + r >= pad.y && b.y - r < pad.y + pad.h && Math.abs(b.x - pad.x) <= pad.w / 2 + r * 0.6) {
         // Classic paddle control: where the ball lands sets its angle, up to 60° from vertical.
         const off = Math.max(-1, Math.min(1, (b.x - pad.x) / (pad.w / 2)))
         const a = off * (Math.PI / 3) + Math.max(-0.15, Math.min(0.15, pad.v / 6000))

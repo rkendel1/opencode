@@ -19,6 +19,8 @@ const DraftRoute = lazy(() => import("@/new-session/route").then((module) => ({ 
 
 const SettingsScreen = lazy(() => import("@/settings/shell").then((module) => ({ default: module.SettingsScreen })))
 
+const CompareScreen = lazy(() => import("@/compare/screen").then((module) => ({ default: module.CompareScreen })))
+
 const ConnectServerScreen = lazy(() =>
   import("@/servers/connect/screen").then((module) => ({ default: module.ConnectServerScreen })),
 )
@@ -65,6 +67,20 @@ export function AppRoutes() {
             >
               <TargetServerRoute>
                 <TargetSessionRouteContent />
+              </TargetServerRoute>
+            </Suspense>
+          </SessionRouteFrame>
+        )}
+      />
+      <Route
+        path={["/server/:serverKey/compare", "/server/:serverKey/compare/:id"]}
+        component={() => (
+          <SessionRouteFrame padded>
+            <Suspense fallback={<SessionPanelFrame raised />}>
+              <TargetServerRoute>
+                <SessionPanelFrame raised>
+                  <CompareScreen />
+                </SessionPanelFrame>
               </TargetServerRoute>
             </Suspense>
           </SessionRouteFrame>

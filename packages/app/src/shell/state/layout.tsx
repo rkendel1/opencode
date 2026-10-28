@@ -60,6 +60,7 @@ export type LayoutRoute =
   | { type: "components" }
   | { type: "draft"; draftID: string }
   | { type: "session"; sessionId: string; server: ServerConnection.Key }
+  | { type: "compare"; server: ServerConnection.Key; comparisonID?: string }
 
 export const currentRoute = (pathname: string, search: string): LayoutRoute => {
   const parts = pathname.split("/").filter(Boolean)
@@ -87,6 +88,9 @@ export const currentRoute = (pathname: string, search: string): LayoutRoute => {
       server: requireServerKey(parts[1]),
     }
   }
+
+  if (parts[0] === "server" && parts[2] === "compare")
+    return { type: "compare", server: requireServerKey(parts[1]), comparisonID: parts[3] }
 
   throw new Error("Unrecognised route!")
 }

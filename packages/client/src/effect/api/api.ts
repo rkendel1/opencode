@@ -39,6 +39,7 @@ import type { OpenCodeEvent } from "@opencode/protocol/groups/event"
 import type { Pty } from "@opencode/schema/pty"
 import type { Reference } from "@opencode/schema/reference"
 import type { Worktree } from "@opencode/schema/worktree"
+import type { Comparison } from "@opencode/schema/comparison"
 import type { Vcs } from "@opencode/schema/vcs"
 import type { WebSearch } from "@opencode/schema/websearch"
 import type { UsageLimits } from "@opencode/schema/usage-limits"
@@ -2368,6 +2369,48 @@ export interface WorktreeApi<E = never> {
   readonly refresh: WorktreeRefreshOperation<E>
 }
 
+export type ComparisonListOutput = ReadonlyArray<Comparison.Summary>
+export type ComparisonListOperation<E = never> = () => Effect.Effect<ComparisonListOutput, E>
+
+export type ComparisonCreateInput = {
+  readonly directory: AbsolutePath
+  readonly task: Comparison.Task
+  readonly model?: Model.Ref | undefined
+  readonly stackAgentModel?: Model.Ref | undefined
+  readonly rerunOf?: Comparison.ID | undefined
+}
+export type ComparisonCreateOutput = Comparison.Info
+export type ComparisonCreateOperation<E = never> = (
+  input: ComparisonCreateInput,
+) => Effect.Effect<ComparisonCreateOutput, E>
+
+export type ComparisonGetInput = { readonly comparisonID: Comparison.ID }
+export type ComparisonGetOutput = Comparison.Info
+export type ComparisonGetOperation<E = never> = (input: ComparisonGetInput) => Effect.Effect<ComparisonGetOutput, E>
+
+export type ComparisonCancelInput = {
+  readonly comparisonID: Comparison.ID
+  readonly harness?: Comparison.Harness | undefined
+}
+export type ComparisonCancelOutput = Comparison.Info
+export type ComparisonCancelOperation<E = never> = (
+  input: ComparisonCancelInput,
+) => Effect.Effect<ComparisonCancelOutput, E>
+
+export type ComparisonRerunInput = { readonly comparisonID: Comparison.ID }
+export type ComparisonRerunOutput = Comparison.Info
+export type ComparisonRerunOperation<E = never> = (
+  input: ComparisonRerunInput,
+) => Effect.Effect<ComparisonRerunOutput, E>
+
+export interface ComparisonApi<E = never> {
+  readonly list: ComparisonListOperation<E>
+  readonly create: ComparisonCreateOperation<E>
+  readonly get: ComparisonGetOperation<E>
+  readonly cancel: ComparisonCancelOperation<E>
+  readonly rerun: ComparisonRerunOperation<E>
+}
+
 export type VcsInitInput = {
   readonly location?: { readonly directory?: string | undefined } | undefined
   readonly provider?: string | undefined
@@ -2537,6 +2580,7 @@ export interface AppApi<E = never> {
   readonly shell: ShellApi<E>
   readonly reference: ReferenceApi<E>
   readonly worktree: WorktreeApi<E>
+  readonly comparison: ComparisonApi<E>
   readonly vcs: VcsApi<E>
   readonly debug: DebugApi<E>
   readonly migration: MigrationApi<E>

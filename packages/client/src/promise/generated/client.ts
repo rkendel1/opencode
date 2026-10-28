@@ -263,6 +263,15 @@ import type {
   WorktreeRemoveOutput,
   WorktreeRefreshInput,
   WorktreeRefreshOutput,
+  ComparisonListOutput,
+  ComparisonCreateInput,
+  ComparisonCreateOutput,
+  ComparisonGetInput,
+  ComparisonGetOutput,
+  ComparisonCancelInput,
+  ComparisonCancelOutput,
+  ComparisonRerunInput,
+  ComparisonRerunOutput,
   VcsInitInput,
   VcsInitOutput,
   VcsGetInput,
@@ -2232,6 +2241,65 @@ export function make(options: ClientOptions) {
             successStatus: 204,
             declaredStatuses: [400, 401, 404],
             empty: true,
+          },
+          requestOptions,
+        ),
+    },
+    comparison: {
+      list: (requestOptions?: RequestOptions) =>
+        request<ComparisonListOutput>(
+          { method: "GET", path: `/api/comparison`, successStatus: 200, declaredStatuses: [400, 401], empty: false },
+          requestOptions,
+        ),
+      create: (input: ComparisonCreateInput, requestOptions?: RequestOptions) =>
+        request<ComparisonCreateOutput>(
+          {
+            method: "POST",
+            path: `/api/comparison`,
+            body: {
+              directory: input["directory"],
+              task: input["task"],
+              model: input["model"],
+              stackAgentModel: input["stackAgentModel"],
+              rerunOf: input["rerunOf"],
+            },
+            successStatus: 200,
+            declaredStatuses: [400, 401],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      get: (input: ComparisonGetInput, requestOptions?: RequestOptions) =>
+        request<ComparisonGetOutput>(
+          {
+            method: "GET",
+            path: `/api/comparison/${encodeURIComponent(input.comparisonID)}`,
+            successStatus: 200,
+            declaredStatuses: [400, 401, 404],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      cancel: (input: ComparisonCancelInput, requestOptions?: RequestOptions) =>
+        request<ComparisonCancelOutput>(
+          {
+            method: "POST",
+            path: `/api/comparison/${encodeURIComponent(input.comparisonID)}/cancel`,
+            body: { harness: input["harness"] },
+            successStatus: 200,
+            declaredStatuses: [400, 401, 404],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      rerun: (input: ComparisonRerunInput, requestOptions?: RequestOptions) =>
+        request<ComparisonRerunOutput>(
+          {
+            method: "POST",
+            path: `/api/comparison/${encodeURIComponent(input.comparisonID)}/rerun`,
+            successStatus: 200,
+            declaredStatuses: [400, 401, 404],
+            empty: false,
           },
           requestOptions,
         ),

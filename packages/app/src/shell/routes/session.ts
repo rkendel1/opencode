@@ -28,3 +28,10 @@ export async function rootSession<T extends SessionParent>(session: T, get: (ses
 
   return current
 }
+
+/** The Compare Agents workspace: a new comparison for `directory`, or the persisted comparison `id`. */
+export function compareHref(server: ServerConnection.Key, input: { id?: string; directory?: string }) {
+  const base = `/server/${base64Encode(server)}/compare${input.id ? `/${input.id}` : ""}`
+
+  return input.directory ? `${base}?directory=${encodeURIComponent(input.directory)}` : base
+}

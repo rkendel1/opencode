@@ -14,6 +14,8 @@ export function useNewSessionCommands(input: {
     enabled: () => boolean
     cycle: () => void
   }
+  /** Opens the Compare Agents workspace for the draft's repository. */
+  compare: () => void
 }) {
   const command = useCommand()
   const dialog = useDialog()
@@ -46,6 +48,13 @@ export function useNewSessionCommands(input: {
       keybind: "mod+alt+l",
       disabled: !input.workspace.enabled(),
       onSelect: input.workspace.cycle,
+    },
+    {
+      id: "compare.open",
+      title: language.t("compare.command"),
+      description: language.t("compare.command.description"),
+      category: language.t("command.category.workspace"),
+      onSelect: input.compare,
     },
   ])
   // Shadows the titlebar's command of the same key while the draft is mounted, so it searches projects in place.

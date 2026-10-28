@@ -34,9 +34,15 @@ const EXAMPLE = {
 export function prompt(
   finding: Improvement.Finding,
   traces: readonly { evidence: Improvement.FindingEvidence; activity: readonly Comparison.Activity[] }[],
+  target: Improvement.Target = "project",
 ) {
   return [
     "You are investigating a weakness that statistical analysis found in this project's recorded agent runs.",
+    ...(target === "stack-agent"
+      ? [
+          "This workspace is the Stack-Agent runtime's source code. Propose a change to Stack-Agent itself; it will be rebuilt and the finding's tasks rerun with the new build, so include stack-agent in evaluation.targetRuntimes.",
+        ]
+      : []),
     "Investigate the repository before proposing anything. Open the files that matter; cite only files you opened.",
     "The finding is an association, not a proven cause. Treat your own explanation as a hypothesis, list alternatives, and design a test that could refute it.",
     "Prefer the smallest change. Do not propose changes to permission settings; the pipeline will not evaluate them.",

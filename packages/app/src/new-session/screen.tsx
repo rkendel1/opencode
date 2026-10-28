@@ -5,7 +5,7 @@ import { useLayout } from "@/shell/state/layout"
 import { A, useNavigate, useSearchParams } from "@solidjs/router"
 import { createEffect, createMemo, createResource, on, Show, untrack } from "solid-js"
 import { useLanguage } from "@/runtime/i18n/language"
-import { compareHref, improveHref } from "@/shell/routes/session"
+import { compareHref, improveHref, runtimeHref } from "@/shell/routes/session"
 import { createComposerModel } from "@/composer/model"
 import { useComposerCommands } from "@/composer/commands"
 import { createNewSessionComposerAdapter } from "./composer-adapter"
@@ -74,6 +74,11 @@ export default function NewSessionPage(props: { draftId: string }) {
       const draft = draftTab()
 
       if (draft) navigate(improveHref(draft.server, { directory: draft.directory }))
+    },
+    runtime: () => {
+      const draft = draftTab()
+
+      if (draft) navigate(runtimeHref(draft.server))
     },
   })
   // Focus once the draft loads. restoreFocus reads the stored cursor, so tracking it here would reapply

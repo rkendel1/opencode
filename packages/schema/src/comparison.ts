@@ -61,6 +61,8 @@ export const CreateInput = Schema.Struct({
   /** The commit both workspaces start from. Omitted, the repository's current HEAD. */
   revision: optional(Schema.String),
   origin: optional(Origin),
+  /** Pins the Stack-Agent run to one runtime generation, or `external`. Omitted, the active generation at run time. */
+  stackAgentGeneration: optional(Schema.String),
   directory: AbsolutePath,
   task: Task,
   /** Both runs use this model. Omitted, each Session resolves the default model. */
@@ -214,6 +216,7 @@ export const Definition = Schema.Struct({
   harnesses: Schema.Array(Harness),
   rerunOf: optional(ID),
   origin: optional(Origin),
+  stackAgentGeneration: optional(Schema.String),
 }).annotate({ identifier: "Comparison.Definition" })
 export interface Definition extends Schema.Schema.Type<typeof Definition> {}
 

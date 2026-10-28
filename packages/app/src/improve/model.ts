@@ -54,4 +54,5 @@ export const validated = (info: ImprovementInfo) =>
 const SETTLED = new Set(["proposed", "needs-proposal", "evaluated", "decided"])
 
 /** Polling stops once the pipeline waits on the user. */
-export const live = (info: ImprovementInfo | undefined) => !info || !SETTLED.has(info.state.stage)
+export const live = (info: ImprovementInfo | undefined) =>
+  !info || !SETTLED.has(info.state.stage) || info.state.application?.status === "applying"

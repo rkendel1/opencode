@@ -22,6 +22,14 @@ export const ImprovementHandler = HttpApiBuilder.group(Api, "server.improvement"
       .handle("improvement.decide", (ctx) =>
         improvements.decide(ctx.params.improvementID, ctx.payload).pipe(Effect.mapError(either)),
       )
+      .handle("improvement.preview", (ctx) =>
+        improvements.preview(ctx.params.improvementID).pipe(Effect.mapError(either)),
+      )
+      .handle("improvement.apply", (ctx) => improvements.apply(ctx.params.improvementID).pipe(Effect.mapError(either)))
+      .handle("improvement.stage", (ctx) => improvements.stage(ctx.params.improvementID).pipe(Effect.mapError(either)))
+      .handle("improvement.publish", (ctx) =>
+        improvements.publish(ctx.params.improvementID).pipe(Effect.mapError(either)),
+      )
   }),
 )
 

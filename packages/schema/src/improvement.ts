@@ -185,6 +185,18 @@ export const Investigation = Schema.Struct({
 }).annotate({ identifier: "Improvement.Investigation" })
 export interface Investigation extends Schema.Schema.Type<typeof Investigation> {}
 
+/** What an intervention changes: the project under test, or the Stack-Agent runtime's own source. */
+export const Target = Schema.Literals(["project", "stack-agent"]).annotate({ identifier: "Improvement.Target" })
+export type Target = typeof Target.Type
+
+/** A runtime version an evaluation arm was pinned to: a generation ID, or `external` for the unmanaged binary. */
+export const RuntimeRef = Schema.Struct({
+  pin: Schema.String,
+  commit: optional(Schema.String),
+  version: optional(Schema.String),
+}).annotate({ identifier: "Improvement.RuntimeRef" })
+export interface RuntimeRef extends Schema.Schema.Type<typeof RuntimeRef> {}
+
 export const PlannedRun = Schema.Struct({
   variant: Schema.Literals(["baseline", "candidate"]),
   taskKey: Schema.String,
@@ -203,6 +215,8 @@ export const Plan = Schema.Struct({
   taskKeys: Schema.Array(Schema.String),
   targetRuntimes: Schema.Array(Comparison.Harness),
   runs: Schema.Array(PlannedRun),
+  /** For a Stack-Agent target: the runtime the baseline arm is pinned to. */
+  baselineRuntime: optional(RuntimeRef),
 }).annotate({ identifier: "Improvement.Plan" })
 export interface Plan extends Schema.Schema.Type<typeof Plan> {}
 
@@ -228,6 +242,8 @@ export const Implementation = Schema.Struct({
   changes: Schema.Array(Comparison.FileChange),
   checks: Schema.Array(Check),
   error: optional(Schema.String),
+  /** For a Stack-Agent target: the validated build of the implementation commit the candidate arm runs. */
+  generation: optional(Schema.String),
 }).annotate({ identifier: "Improvement.Implementation" })
 export interface Implementation extends Schema.Schema.Type<typeof Implementation> {}
 
@@ -257,8 +273,52 @@ export const Evaluation = Schema.Struct({
   results: Schema.Array(HarnessResult),
   verdict: optional(Disposition),
   reason: optional(Schema.String),
+  runtime: optional(Schema.Struct({ baseline: optional(RuntimeRef), candidate: optional(RuntimeRef) })),
 }).annotate({ identifier: "Improvement.Evaluation" })
 export interface Evaluation extends Schema.Schema.Type<typeof Evaluation> {}
+
+/** Applying an evaluated Stack-Agent change to its source repository as a reviewable branch. */
+export const Application = Schema.Struct({
+  status: Schema.Literals(["applying", "applied", "conflict", "failed"]),
+  sourceDirectory: AbsolutePath,
+  /** The branch the change is based on; it is never modified. */
+  targetBranch: Schema.String,
+  /** That branch's tip when the change was applied. */
+  tip: Schema.String,
+  /** The revision the change was implemented and evaluated against. */
+  tested: Schema.String,
+  /** The target moved since the change was tested. */
+  drift: Schema.Boolean,
+  conflicts: Schema.Array(Schema.String),
+  directory: optional(AbsolutePath),
+  branch: optional(Schema.String),
+  commit: optional(Schema.String),
+  /** The applied commit's source tree equals the evaluated implementation's. */
+  sameSource: optional(Schema.Boolean),
+  diff: optional(Schema.String),
+  diffTruncated: Schema.Boolean,
+  checks: Schema.Array(Check),
+  error: optional(Schema.String),
+  appliedAt: optional(Schema.Finite),
+  /** The generation built from the applied commit, ready to activate. */
+  build: optional(Schema.String),
+  published: optional(Schema.Struct({ remote: Schema.String, at: Schema.Finite, output: Schema.String })),
+}).annotate({ identifier: "Improvement.Application" })
+export interface Application extends Schema.Schema.Type<typeof Application> {}
+
+/** What applying would do right now, computed without touching any branch or worktree. */
+export const ApplyPreview = Schema.Struct({
+  sourceDirectory: AbsolutePath,
+  targetBranch: Schema.String,
+  tip: optional(Schema.String),
+  tested: Schema.String,
+  drift: Schema.Boolean,
+  conflicts: Schema.Array(Schema.String),
+  files: Schema.Array(Schema.String),
+  remote: optional(Schema.String),
+  blocker: optional(Schema.String),
+}).annotate({ identifier: "Improvement.ApplyPreview" })
+export interface ApplyPreview extends Schema.Schema.Type<typeof ApplyPreview> {}
 
 export const Stage = Schema.Literals([
   "investigating",
@@ -280,6 +340,11 @@ export const Definition = Schema.Struct({
   projectID: Project.ID,
   baseRevision: Schema.String,
   finding: Finding,
+  target: optional(Target),
+  /** For a Stack-Agent target: the source repository and the revision investigation and implementation start from. */
+  source: optional(
+    Schema.Struct({ directory: AbsolutePath, projectID: Project.ID, branch: Schema.String, revision: Schema.String }),
+  ),
 }).annotate({ identifier: "Improvement.Definition" })
 export interface Definition extends Schema.Schema.Type<typeof Definition> {}
 
@@ -290,6 +355,7 @@ export const State = Schema.Struct({
   implementation: optional(Implementation),
   evaluation: optional(Evaluation),
   decision: optional(Schema.Struct({ decision: Decision, at: Schema.Finite, note: optional(Schema.String) })),
+  application: optional(Application),
   error: optional(Schema.String),
 }).annotate({ identifier: "Improvement.State" })
 export interface State extends Schema.Schema.Type<typeof State> {}
@@ -310,7 +376,11 @@ export const Summary = Schema.Struct({
 }).annotate({ identifier: "Improvement.Summary" })
 export interface Summary extends Schema.Schema.Type<typeof Summary> {}
 
-export const CreateInput = Schema.Struct({ directory: AbsolutePath, findingID: Schema.String }).annotate({
+export const CreateInput = Schema.Struct({
+  directory: AbsolutePath,
+  findingID: Schema.String,
+  target: optional(Target),
+}).annotate({
   identifier: "Improvement.CreateInput",
 })
 export interface CreateInput extends Schema.Schema.Type<typeof CreateInput> {}

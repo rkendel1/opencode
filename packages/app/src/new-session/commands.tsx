@@ -18,6 +18,8 @@ export function useNewSessionCommands(input: {
   compare: () => void
   /** Opens the Improvement Lab for the draft's repository. */
   improve: () => void
+  /** Opens the Stack-Agent runtime page. */
+  runtime: () => void
 }) {
   const command = useCommand()
   const dialog = useDialog()
@@ -64,6 +66,13 @@ export function useNewSessionCommands(input: {
       description: language.t("improve.command.description"),
       category: language.t("command.category.workspace"),
       onSelect: input.improve,
+    },
+    {
+      id: "runtime.open",
+      title: language.t("runtime.command"),
+      description: language.t("runtime.command.description"),
+      category: language.t("command.category.workspace"),
+      onSelect: input.runtime,
     },
   ])
   // Shadows the titlebar's command of the same key while the draft is mounted, so it searches projects in place.

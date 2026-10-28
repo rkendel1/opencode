@@ -41,6 +41,7 @@ import type { Reference } from "@opencode/schema/reference"
 import type { Worktree } from "@opencode/schema/worktree"
 import type { Comparison } from "@opencode/schema/comparison"
 import type { Improvement } from "@opencode/schema/improvement"
+import type { StackAgentRuntime } from "@opencode/schema/stack-agent-runtime"
 import type { Vcs } from "@opencode/schema/vcs"
 import type { WebSearch } from "@opencode/schema/websearch"
 import type { UsageLimits } from "@opencode/schema/usage-limits"
@@ -2377,6 +2378,7 @@ export type ComparisonCreateInput = {
   readonly id?: Comparison.ID | undefined
   readonly revision?: string | undefined
   readonly origin?: Comparison.Origin | undefined
+  readonly stackAgentGeneration?: string | undefined
   readonly directory: AbsolutePath
   readonly task: Comparison.Task
   readonly model?: Model.Ref | undefined
@@ -2424,7 +2426,11 @@ export type ImprovementAnalysisOperation<E = never> = (
 export type ImprovementListOutput = ReadonlyArray<Improvement.Summary>
 export type ImprovementListOperation<E = never> = () => Effect.Effect<ImprovementListOutput, E>
 
-export type ImprovementCreateInput = { readonly directory: AbsolutePath; readonly findingID: string }
+export type ImprovementCreateInput = {
+  readonly directory: AbsolutePath
+  readonly findingID: string
+  readonly target?: Improvement.Target | undefined
+}
 export type ImprovementCreateOutput = Improvement.Info
 export type ImprovementCreateOperation<E = never> = (
   input: ImprovementCreateInput,
@@ -2460,6 +2466,30 @@ export type ImprovementDecideOperation<E = never> = (
   input: ImprovementDecideInput,
 ) => Effect.Effect<ImprovementDecideOutput, E>
 
+export type ImprovementPreviewInput = { readonly improvementID: Improvement.ID }
+export type ImprovementPreviewOutput = Improvement.ApplyPreview
+export type ImprovementPreviewOperation<E = never> = (
+  input: ImprovementPreviewInput,
+) => Effect.Effect<ImprovementPreviewOutput, E>
+
+export type ImprovementApplyInput = { readonly improvementID: Improvement.ID }
+export type ImprovementApplyOutput = Improvement.Info
+export type ImprovementApplyOperation<E = never> = (
+  input: ImprovementApplyInput,
+) => Effect.Effect<ImprovementApplyOutput, E>
+
+export type ImprovementStageInput = { readonly improvementID: Improvement.ID }
+export type ImprovementStageOutput = Improvement.Info
+export type ImprovementStageOperation<E = never> = (
+  input: ImprovementStageInput,
+) => Effect.Effect<ImprovementStageOutput, E>
+
+export type ImprovementPublishInput = { readonly improvementID: Improvement.ID }
+export type ImprovementPublishOutput = Improvement.Info
+export type ImprovementPublishOperation<E = never> = (
+  input: ImprovementPublishInput,
+) => Effect.Effect<ImprovementPublishOutput, E>
+
 export interface ImprovementApi<E = never> {
   readonly analysis: ImprovementAnalysisOperation<E>
   readonly list: ImprovementListOperation<E>
@@ -2468,6 +2498,64 @@ export interface ImprovementApi<E = never> {
   readonly investigate: ImprovementInvestigateOperation<E>
   readonly approve: ImprovementApproveOperation<E>
   readonly decide: ImprovementDecideOperation<E>
+  readonly preview: ImprovementPreviewOperation<E>
+  readonly apply: ImprovementApplyOperation<E>
+  readonly stage: ImprovementStageOperation<E>
+  readonly publish: ImprovementPublishOperation<E>
+}
+
+export type StackAgentStatusOutput = StackAgentRuntime.Status
+export type StackAgentStatusOperation<E = never> = () => Effect.Effect<StackAgentStatusOutput, E>
+
+export type StackAgentConfigureInput = {
+  readonly sourceDirectory?: AbsolutePath | undefined
+  readonly branch?: string | undefined
+  readonly buildCommand?: ReadonlyArray<string> | undefined
+  readonly artifact?: string | undefined
+  readonly smoke?: ReadonlyArray<ReadonlyArray<string>> | undefined
+  readonly checks?: ReadonlyArray<ReadonlyArray<string>> | undefined
+  readonly remote?: string | undefined
+}
+export type StackAgentConfigureOutput = StackAgentRuntime.Settings
+export type StackAgentConfigureOperation<E = never> = (
+  input?: StackAgentConfigureInput,
+) => Effect.Effect<StackAgentConfigureOutput, E>
+
+export type StackAgentCheckInput = { readonly fetch?: boolean | undefined }
+export type StackAgentCheckOutput = StackAgentRuntime.Status
+export type StackAgentCheckOperation<E = never> = (
+  input?: StackAgentCheckInput,
+) => Effect.Effect<StackAgentCheckOutput, E>
+
+export type StackAgentBuildInput = { readonly revision?: string | undefined }
+export type StackAgentBuildOutput = StackAgentRuntime.Generation
+export type StackAgentBuildOperation<E = never> = (
+  input?: StackAgentBuildInput,
+) => Effect.Effect<StackAgentBuildOutput, E>
+
+export type StackAgentActivateInput = { readonly generation: string }
+export type StackAgentActivateOutput = StackAgentRuntime.Status
+export type StackAgentActivateOperation<E = never> = (
+  input: StackAgentActivateInput,
+) => Effect.Effect<StackAgentActivateOutput, E>
+
+export type StackAgentRollbackOutput = StackAgentRuntime.Status
+export type StackAgentRollbackOperation<E = never> = () => Effect.Effect<StackAgentRollbackOutput, E>
+
+export type StackAgentUsageInput = { readonly sessionID: Session.ID }
+export type StackAgentUsageOutput = StackAgentRuntime.Usage | null
+export type StackAgentUsageOperation<E = never> = (
+  input: StackAgentUsageInput,
+) => Effect.Effect<StackAgentUsageOutput, E>
+
+export interface StackAgentApi<E = never> {
+  readonly status: StackAgentStatusOperation<E>
+  readonly configure: StackAgentConfigureOperation<E>
+  readonly check: StackAgentCheckOperation<E>
+  readonly build: StackAgentBuildOperation<E>
+  readonly activate: StackAgentActivateOperation<E>
+  readonly rollback: StackAgentRollbackOperation<E>
+  readonly usage: StackAgentUsageOperation<E>
 }
 
 export type VcsInitInput = {
@@ -2641,6 +2729,7 @@ export interface AppApi<E = never> {
   readonly worktree: WorktreeApi<E>
   readonly comparison: ComparisonApi<E>
   readonly improvement: ImprovementApi<E>
+  readonly stackAgent: StackAgentApi<E>
   readonly vcs: VcsApi<E>
   readonly debug: DebugApi<E>
   readonly migration: MigrationApi<E>

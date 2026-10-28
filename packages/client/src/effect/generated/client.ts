@@ -285,6 +285,26 @@ import type {
   ImprovementApproveOutput,
   ImprovementDecideInput,
   ImprovementDecideOutput,
+  ImprovementPreviewInput,
+  ImprovementPreviewOutput,
+  ImprovementApplyInput,
+  ImprovementApplyOutput,
+  ImprovementStageInput,
+  ImprovementStageOutput,
+  ImprovementPublishInput,
+  ImprovementPublishOutput,
+  StackAgentStatusOutput,
+  StackAgentConfigureInput,
+  StackAgentConfigureOutput,
+  StackAgentCheckInput,
+  StackAgentCheckOutput,
+  StackAgentBuildInput,
+  StackAgentBuildOutput,
+  StackAgentActivateInput,
+  StackAgentActivateOutput,
+  StackAgentRollbackOutput,
+  StackAgentUsageInput,
+  StackAgentUsageOutput,
   VcsInitInput,
   VcsInitOutput,
   VcsGetInput,
@@ -1675,6 +1695,7 @@ const EndpointComparisonCreate = (raw: RawClient["server.comparison"]) => (input
         id: input["id"],
         revision: input["revision"],
         origin: input["origin"],
+        stackAgentGeneration: input["stackAgentGeneration"],
         directory: input["directory"],
         task: input["task"],
         model: input["model"],
@@ -1720,9 +1741,9 @@ const EndpointImprovementList = (raw: RawClient["server.improvement"]) => () =>
 
 const EndpointImprovementCreate = (raw: RawClient["server.improvement"]) => (input: ImprovementCreateInput) =>
   preserveEffect<ImprovementCreateOutput>()(
-    raw["improvement.create"]({ payload: { directory: input["directory"], findingID: input["findingID"] } }).pipe(
-      Effect.mapError(mapClientError),
-    ),
+    raw["improvement.create"]({
+      payload: { directory: input["directory"], findingID: input["findingID"], target: input["target"] },
+    }).pipe(Effect.mapError(mapClientError)),
   )
 
 const EndpointImprovementGet = (raw: RawClient["server.improvement"]) => (input: ImprovementGetInput) =>
@@ -1753,6 +1774,34 @@ const EndpointImprovementDecide = (raw: RawClient["server.improvement"]) => (inp
     }).pipe(Effect.mapError(mapClientError)),
   )
 
+const EndpointImprovementPreview = (raw: RawClient["server.improvement"]) => (input: ImprovementPreviewInput) =>
+  preserveEffect<ImprovementPreviewOutput>()(
+    raw["improvement.preview"]({ params: { improvementID: input["improvementID"] } }).pipe(
+      Effect.mapError(mapClientError),
+    ),
+  )
+
+const EndpointImprovementApply = (raw: RawClient["server.improvement"]) => (input: ImprovementApplyInput) =>
+  preserveEffect<ImprovementApplyOutput>()(
+    raw["improvement.apply"]({ params: { improvementID: input["improvementID"] } }).pipe(
+      Effect.mapError(mapClientError),
+    ),
+  )
+
+const EndpointImprovementStage = (raw: RawClient["server.improvement"]) => (input: ImprovementStageInput) =>
+  preserveEffect<ImprovementStageOutput>()(
+    raw["improvement.stage"]({ params: { improvementID: input["improvementID"] } }).pipe(
+      Effect.mapError(mapClientError),
+    ),
+  )
+
+const EndpointImprovementPublish = (raw: RawClient["server.improvement"]) => (input: ImprovementPublishInput) =>
+  preserveEffect<ImprovementPublishOutput>()(
+    raw["improvement.publish"]({ params: { improvementID: input["improvementID"] } }).pipe(
+      Effect.mapError(mapClientError),
+    ),
+  )
+
 const adaptGroupImprovement = (raw: RawClient["server.improvement"]) => ({
   analysis: EndpointImprovementAnalysis(raw),
   list: EndpointImprovementList(raw),
@@ -1761,6 +1810,68 @@ const adaptGroupImprovement = (raw: RawClient["server.improvement"]) => ({
   investigate: EndpointImprovementInvestigate(raw),
   approve: EndpointImprovementApprove(raw),
   decide: EndpointImprovementDecide(raw),
+  preview: EndpointImprovementPreview(raw),
+  apply: EndpointImprovementApply(raw),
+  stage: EndpointImprovementStage(raw),
+  publish: EndpointImprovementPublish(raw),
+})
+
+const EndpointStackAgentStatus = (raw: RawClient["server.stackAgentRuntime"]) => () =>
+  preserveEffect<StackAgentStatusOutput>()(raw["stackAgentRuntime.status"]({}).pipe(Effect.mapError(mapClientError)))
+
+const EndpointStackAgentConfigure =
+  (raw: RawClient["server.stackAgentRuntime"]) => (input?: StackAgentConfigureInput) =>
+    preserveEffect<StackAgentConfigureOutput>()(
+      raw["stackAgentRuntime.configure"]({
+        payload: {
+          sourceDirectory: input?.["sourceDirectory"],
+          branch: input?.["branch"],
+          buildCommand: input?.["buildCommand"],
+          artifact: input?.["artifact"],
+          smoke: input?.["smoke"],
+          checks: input?.["checks"],
+          remote: input?.["remote"],
+        },
+      }).pipe(Effect.mapError(mapClientError)),
+    )
+
+const EndpointStackAgentCheck = (raw: RawClient["server.stackAgentRuntime"]) => (input?: StackAgentCheckInput) =>
+  preserveEffect<StackAgentCheckOutput>()(
+    raw["stackAgentRuntime.check"]({ payload: { fetch: input?.["fetch"] } }).pipe(Effect.mapError(mapClientError)),
+  )
+
+const EndpointStackAgentBuild = (raw: RawClient["server.stackAgentRuntime"]) => (input?: StackAgentBuildInput) =>
+  preserveEffect<StackAgentBuildOutput>()(
+    raw["stackAgentRuntime.build"]({ payload: { revision: input?.["revision"] } }).pipe(
+      Effect.mapError(mapClientError),
+    ),
+  )
+
+const EndpointStackAgentActivate = (raw: RawClient["server.stackAgentRuntime"]) => (input: StackAgentActivateInput) =>
+  preserveEffect<StackAgentActivateOutput>()(
+    raw["stackAgentRuntime.activate"]({ payload: { generation: input["generation"] } }).pipe(
+      Effect.mapError(mapClientError),
+    ),
+  )
+
+const EndpointStackAgentRollback = (raw: RawClient["server.stackAgentRuntime"]) => () =>
+  preserveEffect<StackAgentRollbackOutput>()(
+    raw["stackAgentRuntime.rollback"]({}).pipe(Effect.mapError(mapClientError)),
+  )
+
+const EndpointStackAgentUsage = (raw: RawClient["server.stackAgentRuntime"]) => (input: StackAgentUsageInput) =>
+  preserveEffect<StackAgentUsageOutput>()(
+    raw["stackAgentRuntime.usage"]({ params: { sessionID: input["sessionID"] } }).pipe(Effect.mapError(mapClientError)),
+  )
+
+const adaptGroupStackAgent = (raw: RawClient["server.stackAgentRuntime"]) => ({
+  status: EndpointStackAgentStatus(raw),
+  configure: EndpointStackAgentConfigure(raw),
+  check: EndpointStackAgentCheck(raw),
+  build: EndpointStackAgentBuild(raw),
+  activate: EndpointStackAgentActivate(raw),
+  rollback: EndpointStackAgentRollback(raw),
+  usage: EndpointStackAgentUsage(raw),
 })
 
 const EndpointVcsInit = (raw: RawClient["server.vcs"]) => (input?: VcsInitInput) =>
@@ -1910,6 +2021,7 @@ const adaptClient = (raw: RawClient) => ({
   worktree: adaptGroupWorktree(raw["server.worktree"]),
   comparison: adaptGroupComparison(raw["server.comparison"]),
   improvement: adaptGroupImprovement(raw["server.improvement"]),
+  stackAgent: adaptGroupStackAgent(raw["server.stackAgentRuntime"]),
   vcs: adaptGroupVcs(raw["server.vcs"]),
   debug: adaptGroupDebug(raw["server.debug"]),
   migration: adaptGroupMigration(raw["server.migration"]),

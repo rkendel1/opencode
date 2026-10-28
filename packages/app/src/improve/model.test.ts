@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { ImprovementInfo } from "@opencode/client/promise"
-import { lifecycle, validated } from "./model"
+import { lifecycle, live, validated } from "./model"
 
 const info = (state: Partial<ImprovementInfo["state"]>): ImprovementInfo =>
   // SAFETY: lifecycle and validated read only `state`.
@@ -17,12 +17,26 @@ describe("improvement lifecycle", () => {
       "implemented:pending",
       "verified:pending",
     ])
+
     const failed = info({
       stage: "evaluated",
       investigations: [{ attempt: 0, status: "valid", startedAt: 0, errors: [] }],
       evaluation: { status: "completed", results: [], verdict: "failed-to-implement" },
     })
+
     expect(statuses(failed).slice(2)).toEqual(["proposed:done", "implemented:failed", "verified:pending"])
+  })
+
+  test("keeps polling while a Stack-Agent change is being applied after evaluation", () => {
+    expect(live(info({ stage: "evaluated" }))).toBe(false)
+    expect(
+      live(
+        info({
+          stage: "evaluated",
+          application: { status: "applying" } as ImprovementInfo["state"]["application"],
+        }),
+      ),
+    ).toBe(true)
   })
 
   test("validates only an improved verdict that a reviewer accepted", () => {
@@ -30,6 +44,7 @@ describe("improvement lifecycle", () => {
       stage: "decided" as const,
       evaluation: { status: "completed" as const, results: [], verdict: "improved" as const },
     }
+
     expect(validated(info(evaluated))).toBe(false)
     expect(validated(info({ ...evaluated, decision: { decision: "accept", at: 0 } }))).toBe(true)
     expect(

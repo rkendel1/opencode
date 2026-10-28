@@ -15,6 +15,7 @@ import { InstructionState } from "../instruction-state.js"
 import { SessionInbox } from "../inbox.js"
 import { SessionMessage } from "../message.js"
 import { SessionUsage } from "../usage.js"
+import { StackAgentRuntime } from "../../stack-agent-runtime.js"
 import { StackAgentGateway } from "./stack-agent-gateway.js"
 import { SessionRunnerLLM } from "./llm.js"
 import { DrainResult, Service, type Interface } from "./index.js"
@@ -39,6 +40,7 @@ const layer = Layer.effect(
     const services = yield* Effect.context<never>()
     const native = yield* SessionRunnerLLM.make
     const pty = yield* Pty.Service
+    const runtime = yield* StackAgentRuntime.Service
 
     const drain = Effect.fn("SessionRunnerStackAgent.drain")(function* (input: Parameters<Interface["drain"]>[0]) {
       const sessionID = input.sessionID
@@ -81,6 +83,16 @@ const layer = Layer.effect(
         (server) => Effect.promise(() => server.stop(true)),
       )
 
+      // Resolved per drain: an activation reaches the next task, while a task already running keeps the executable
+      // it started, which is never overwritten.
+      const resolved = yield* runtime
+        .resolve(pinned(selected.session.metadata?.[StackAgentRuntime.PIN]))
+        .pipe(
+          Effect.mapError(
+            (error) => new StepFailedError({ error: { type: "stack-agent.unavailable", message: error.message } }),
+          ),
+        )
+
       const output = { text: "" }
       const emit = (delta: string) =>
         Effect.suspend(() => {
@@ -88,16 +100,11 @@ const layer = Layer.effect(
           return bus.publish(SessionEvent.Text.Delta, { sessionID, assistantMessageID, ordinal: 0, delta })
         })
 
+      const finished = yield* runtime.track(sessionID, resolved)
       const exit = yield* Effect.acquireUseRelease(
         Effect.sync(() =>
           Bun.spawn(
-            [
-              process.env.STACK_AGENT_BIN ?? "stack-agent",
-              "work",
-              goal,
-              "--kind",
-              !planning && Bun.which("pax") ? "change" : "inspect",
-            ],
+            [resolved.executable, "work", goal, "--kind", !planning && Bun.which("pax") ? "change" : "inspect"],
             {
               cwd: loaded.session.location.directory,
               stdin: "ignore",
@@ -127,7 +134,7 @@ const layer = Layer.effect(
             return yield* Effect.promise(() => child.exited)
           }),
         (child) => Effect.sync(() => child.kill()),
-      )
+      ).pipe(Effect.onExit((result) => finished(result._tag === "Success" ? result.value : undefined)))
 
       yield* bus.publish(SessionEvent.Text.Ended, { sessionID, assistantMessageID, ordinal: 0, text: output.text })
       // 0 means verified, 1 means it ran correctly but could not verify the work; the report explains either way.
@@ -151,7 +158,15 @@ const layer = Layer.effect(
 export const node = makeLocationNode({
   service: Service,
   layer,
-  deps: [...SessionRunnerLLM.deps, Pty.node, Bus.node, SessionContext.node, Database.node, llmClient],
+  deps: [
+    ...SessionRunnerLLM.deps,
+    Pty.node,
+    Bus.node,
+    SessionContext.node,
+    Database.node,
+    llmClient,
+    StackAgentRuntime.node,
+  ],
 })
 
 // Leaves the request most of the goal budget; terminal output is context for it, not a replacement.
@@ -175,6 +190,9 @@ function withTerminal(request: string, terminal: { title: string; text: string }
   const bytes = Buffer.from(context)
   return request + (bytes.length <= room ? context : "\n\n" + bytes.subarray(bytes.length - room + 2).toString())
 }
+
+// Session metadata is open JSON; only a string names a generation.
+const pinned = (value: unknown) => (typeof value === "string" ? value : undefined)
 
 function lastUserText(messages: SessionContext.Loaded["messages"]) {
   const text = messages.findLast((message) => message.type === "user")?.text

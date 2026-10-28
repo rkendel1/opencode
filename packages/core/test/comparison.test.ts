@@ -19,6 +19,7 @@ import { AppProcess } from "@opencode/util/process"
 import { LocationServiceMap } from "@opencode/core/location-service-map"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Session } from "@opencode/core/session"
+import { StackAgentRuntime } from "@opencode/core/stack-agent-runtime"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
@@ -53,6 +54,7 @@ const it = testEffect(
         Worktree.node,
         Project.node,
         AppProcess.node,
+        StackAgentRuntime.node,
       ]),
       [
         Global.node.replace(tempGlobalLayer),

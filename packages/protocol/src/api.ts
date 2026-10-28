@@ -34,6 +34,7 @@ import { ProjectGroup } from "./groups/project.js"
 import { WorktreeGroup } from "./groups/worktree.js"
 import { ComparisonGroup } from "./groups/comparison.js"
 import { ImprovementGroup } from "./groups/improvement.js"
+import { StackAgentRuntimeGroup } from "./groups/stack-agent-runtime.js"
 import { VcsGroup } from "./groups/vcs.js"
 import { MigrationGroup } from "./groups/migration.js"
 import { ConfigGroup } from "./groups/config.js"
@@ -102,6 +103,7 @@ type ApiGroups<
   | typeof WorktreeGroup
   | typeof ComparisonGroup
   | typeof ImprovementGroup
+  | typeof StackAgentRuntimeGroup
   | typeof GenerateGroup
   | typeof VoiceGroup
   | typeof ExperimentalGroup
@@ -197,6 +199,7 @@ const makeApiFromGroup = <
     .add(WorktreeGroup)
     .add(ComparisonGroup)
     .add(ImprovementGroup)
+    .add(StackAgentRuntimeGroup)
     .add(VcsGroup.middleware(locationMiddleware))
     .add(DebugGroup)
     .add(MigrationGroup)

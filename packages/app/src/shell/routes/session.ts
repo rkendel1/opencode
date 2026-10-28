@@ -41,3 +41,8 @@ export function improveHref(server: ServerConnection.Key, input: { id?: string; 
   const base = `/server/${base64Encode(server)}/improve${input.id ? `/${input.id}` : ""}`
   return input.directory ? `${base}?directory=${encodeURIComponent(input.directory)}` : base
 }
+
+/** The Stack-Agent runtime page: versions, builds, activation and rollback. */
+export function runtimeHref(server: ServerConnection.Key) {
+  return `/server/${base64Encode(server)}/stack-agent`
+}
